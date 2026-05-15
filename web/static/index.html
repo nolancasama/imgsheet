@@ -133,6 +133,22 @@
     input[type="text"]:focus { border-color: #1f6feb; }
     input[type="text"]::placeholder { color: #484f58; }
 
+    select {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e1e4e8;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+
+    select:focus { border-color: #1f6feb; }
+
     #generate-btn {
       width: 100%;
       padding: 11px;
@@ -266,14 +282,25 @@
     <div class="options-section">
       <label>Options</label>
 
+      <select id="opt-engine">
+        <option value="serpapi">Google (SerpAPI)</option>
+        <option value="brave">Brave</option>
+        <option value="ddg">DuckDuckGo (free)</option>
+      </select>
+
       <label class="checkbox-row">
-        <input type="checkbox" id="opt-pdf" />
-        <span>Export PDF</span>
+        <input type="checkbox" id="opt-randomize" />
+        <span>Randomize results</span>
       </label>
 
       <label class="checkbox-row">
         <input type="checkbox" id="opt-claude" />
         <span>Filter with Claude Vision</span>
+      </label>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="opt-pdf" />
+        <span>Export PDF</span>
       </label>
 
       <input type="text" id="opt-email" placeholder="Send to email (optional)" />
@@ -323,8 +350,10 @@
   const downloadArea = document.getElementById("download-area");
   const previewLabel = document.getElementById("preview-label");
   const previewDot   = document.getElementById("preview-dot");
-  const optPdf       = document.getElementById("opt-pdf");
+  const optEngine    = document.getElementById("opt-engine");
+  const optRandomize = document.getElementById("opt-randomize");
   const optClaude    = document.getElementById("opt-claude");
+  const optPdf       = document.getElementById("opt-pdf");
   const optEmail     = document.getElementById("opt-email");
 
 
@@ -365,6 +394,8 @@
           prompts: names,
           use_claude: optClaude.checked,
           export_pdf: optPdf.checked,
+          randomize: optRandomize.checked,
+          search_engine: optEngine.value,
           send_email_to: optEmail.value.trim(),
         }),
       });

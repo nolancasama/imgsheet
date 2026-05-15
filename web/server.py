@@ -52,7 +52,7 @@ class GenerateRequest(BaseModel):
     use_claude: bool = False
     export_pdf: bool = False
     randomize: bool = False
-    search_engine: str = "ddg"
+    search_engine: str = "serpapi"
     send_email_to: str = ""
 
 
