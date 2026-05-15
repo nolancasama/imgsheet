@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+temp_images/
+web/outputs/
+*.docx
+*.pdf
+.env
+run_counts.json
+seen_hashes.json
+seen_urls.json

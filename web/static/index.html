@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ImgSheet Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e1e4e8;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 14px 24px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f0f6fc;
+      letter-spacing: 0.3px;
+    }
+
+    header .badge {
+      font-size: 0.7rem;
+      background: #1f6feb;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ===== LEFT PANEL ===== */
+    .left-panel {
+      width: 340px;
+      flex-shrink: 0;
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 18px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: #8b949e;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 160px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e1e4e8;
+      font-size: 0.95rem;
+      padding: 10px 12px;
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    textarea:focus { border-color: #1f6feb; }
+    textarea::placeholder { color: #484f58; }
+
+    .options-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #1f6feb;
+      cursor: pointer;
+    }
+
+    .checkbox-row span {
+      font-size: 0.9rem;
+      color: #c9d1d9;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e1e4e8;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus { border-color: #1f6feb; }
+    input[type="text"]::placeholder { color: #484f58; }
+
+    #generate-btn {
+      width: 100%;
+      padding: 11px;
+      background: #1f6feb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    #generate-btn:hover:not(:disabled) { background: #388bfd; }
+    #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status-area {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 10px 12px;
+      min-height: 80px;
+      max-height: 220px;
+      overflow-y: auto;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: #8b949e;
+    }
+
+    .status-area .msg { color: #c9d1d9; }
+    .status-area .msg-error { color: #f85149; }
+    .status-area .msg-success { color: #3fb950; }
+
+    .download-link {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 9px 18px;
+      background: #238636;
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.15s;
+      text-align: center;
+      width: 100%;
+    }
+
+    .download-link:hover { background: #2ea043; }
+
+    .preview-hint {
+      font-size: 0.75rem;
+      color: #484f58;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    /* ===== RIGHT PANEL ===== */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0d1117;
+      position: relative;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      flex-shrink: 0;
+    }
+
+    .preview-header .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #30363d;
+      transition: background 0.2s;
+    }
+
+    .preview-header .dot.active { background: #1f6feb; }
+
+    #preview-label {
+      font-size: 0.85rem;
+      color: #8b949e;
+    }
+
+    #preview-frame {
+      flex: 1;
+      width: 100%;
+      border: none;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>ImgSheet Generator</h1>
+  <span class="badge">Web</span>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <div>
+      <label>Characters</label>
+      <textarea
+        id="prompts"
+        placeholder="Enter character names, one per line or comma separated&#10;&#10;e.g. Goku&#10;Naruto&#10;Luffy"
+        spellcheck="false"
+      ></textarea>
+      <div class="preview-hint">Move cursor to a line to preview images on the right</div>
+    </div>
+
+    <div class="options-section">
+      <label>Options</label>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="opt-pdf" />
+        <span>Export PDF</span>
+      </label>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="opt-claude" />
+        <span>Filter with Claude Vision</span>
+      </label>
+
+      <input type="text" id="opt-email" placeholder="Send to email (optional)" />
+    </div>
+
+    <button id="generate-btn">Generate Sheet</button>
+
+    <div>
+      <label>Status</label>
+      <div class="status-area" id="status-area">
+        <span style="color:#484f58">Ready. Enter characters and click Generate.</span>
+      </div>
+      <div id="download-area"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="preview-header">
+      <div class="dot" id="preview-dot"></div>
+      <span id="preview-label">Image preview — move cursor to a character line</span>
+    </div>
+    <iframe id="preview-frame" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+  </div>
+
+</div>
+
+<script>
+  // ===== UTILITIES =====
+  function parseNames(text) {
+    return text.split(/[\n,]/).map(s => s.trim()).filter(Boolean).slice(0, 25);
+  }
+
+  function getCurrentLineName(textarea) {
+    const pos = textarea.selectionStart;
+    const before = textarea.value.substring(0, pos);
+    const lines = before.split(/[\n,]/);
+    return lines[lines.length - 1].trim();
+  }
+
+  // ===== ELEMENTS =====
+  const promptsEl    = document.getElementById("prompts");
+  const generateBtn  = document.getElementById("generate-btn");
+  const statusArea   = document.getElementById("status-area");
+  const downloadArea = document.getElementById("download-area");
+  const previewFrame = document.getElementById("preview-frame");
+  const previewLabel = document.getElementById("preview-label");
+  const previewDot   = document.getElementById("preview-dot");
+  const optPdf       = document.getElementById("opt-pdf");
+  const optClaude    = document.getElementById("opt-claude");
+  const optEmail     = document.getElementById("opt-email");
+
+  // ===== PREVIEW (debounced) =====
+  let previewTimer = null;
+  let lastPreviewName = "";
+
+  function updatePreview() {
+    const name = getCurrentLineName(promptsEl);
+    if (!name || name === lastPreviewName) return;
+    lastPreviewName = name;
+
+    previewLabel.textContent = `Previewing: ${name}`;
+    previewDot.classList.add("active");
+
+    const query = encodeURIComponent(name + " anime character");
+    previewFrame.src = `https://duckduckgo.com/?q=${query}&ia=images&iax=images`;
+  }
+
+  function schedulePreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(updatePreview, 500);
+  }
+
+  promptsEl.addEventListener("keyup", schedulePreview);
+  promptsEl.addEventListener("click", schedulePreview);
+  promptsEl.addEventListener("input", schedulePreview);
+
+  // ===== STATUS HELPERS =====
+  function clearStatus() {
+    statusArea.innerHTML = "";
+    downloadArea.innerHTML = "";
+  }
+
+  function appendStatus(text, cls = "msg") {
+    const span = document.createElement("div");
+    span.className = cls;
+    span.textContent = text;
+    statusArea.appendChild(span);
+    statusArea.scrollTop = statusArea.scrollHeight;
+  }
+
+  // ===== GENERATE =====
+  generateBtn.addEventListener("click", async () => {
+    const names = parseNames(promptsEl.value);
+    if (names.length === 0) {
+      appendStatus("Please enter at least one character name.", "msg-error");
+      return;
+    }
+
+    clearStatus();
+    generateBtn.disabled = true;
+    generateBtn.textContent = "Generating…";
+    appendStatus(`Starting pipeline for: ${names.join(", ")}`, "msg");
+
+    let jobId;
+
+    try {
+      const res = await fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompts: names,
+          use_claude: optClaude.checked,
+          export_pdf: optPdf.checked,
+          send_email_to: optEmail.value.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Server error ${res.status}: ${err}`);
+      }
+
+      const data = await res.json();
+      jobId = data.job_id;
+    } catch (e) {
+      appendStatus(`Error: ${e.message}`, "msg-error");
+      generateBtn.disabled = false;
+      generateBtn.textContent = "Generate Sheet";
+      return;
+    }
+
+    // Open SSE stream
+    const evtSource = new EventSource(`/progress/${jobId}`);
+
+    evtSource.onmessage = (e) => {
+      appendStatus(e.data);
+    };
+
+    evtSource.addEventListener("done", (e) => {
+      evtSource.close();
+      appendStatus("Done! Your sheet is ready.", "msg-success");
+      generateBtn.disabled = false;
+      generateBtn.textContent = "Generate Sheet";
+
+      const link = document.createElement("a");
+      link.href = `/download/${e.data}`;
+      link.className = "download-link";
+      link.textContent = "Download .docx";
+      downloadArea.appendChild(link);
+    });
+
+    evtSource.addEventListener("error", (e) => {
+      evtSource.close();
+      const msg = e.data || "Unknown error";
+      appendStatus(`Error: ${msg}`, "msg-error");
+      generateBtn.disabled = false;
+      generateBtn.textContent = "Generate Sheet";
+    });
+
+    // Also handle network-level errors from EventSource
+    evtSource.onerror = (e) => {
+      // Only report if not already closed by our handlers
+      if (evtSource.readyState === EventSource.CLOSED) return;
+      evtSource.close();
+      appendStatus("Connection lost. Check server.", "msg-error");
+      generateBtn.disabled = false;
+      generateBtn.textContent = "Generate Sheet";
+    };
+  });
+</script>
+</body>
+</html>

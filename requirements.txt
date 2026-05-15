@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+requests
+Pillow
+python-docx
+duckduckgo_search
+anthropic
