@@ -113,7 +113,7 @@ class PipelineOptions:
     use_claude: bool = False
     export_pdf: bool = False
     randomize: bool = False
-    search_engine: str = "ddg"
+    search_engine: str = "serpapi"
     send_email_to: str = ""  # empty = don't send
 
 
@@ -448,18 +448,21 @@ def _search_serpapi(query, count, start=0):
 
 def _search_ddg(query, count, start=0):
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
         items = []
-        with DDGS() as ddgs:
-            for r in ddgs.images(query, max_results=count + start):
-                items.append({
-                    "original": r.get("image"),
-                    "original_width": r.get("width", 0),
-                    "original_height": r.get("height", 0),
-                    "title": r.get("title", ""),
-                    "source": r.get("source", ""),
-                    "link": r.get("url", ""),
-                })
+        ddgs = DDGS(
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"},
+            timeout=20,
+        )
+        for r in ddgs.images(query, max_results=count + start):
+            items.append({
+                "original": r.get("image"),
+                "original_width": r.get("width", 0),
+                "original_height": r.get("height", 0),
+                "title": r.get("title", ""),
+                "source": r.get("source", ""),
+                "link": r.get("url", ""),
+            })
         return items[start:]
     except Exception as e:
         print("DuckDuckGo search error:", e)

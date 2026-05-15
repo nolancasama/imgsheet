@@ -4,5 +4,5 @@ python-multipart
 requests
 Pillow
 python-docx
-duckduckgo_search
+ddgs
 anthropic
