@@ -224,12 +224,22 @@
       color: #8b949e;
     }
 
-    #preview-frame {
+    .preview-placeholder {
       flex: 1;
-      width: 100%;
-      border: none;
-      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #484f58;
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 40px;
     }
+
+    .preview-placeholder .big { font-size: 2.5rem; }
+    .preview-placeholder a { color: #1f6feb; text-decoration: none; }
+    .preview-placeholder a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -251,7 +261,6 @@
         placeholder="Enter character names, one per line or comma separated&#10;&#10;e.g. Goku&#10;Naruto&#10;Luffy"
         spellcheck="false"
       ></textarea>
-      <div class="preview-hint">Move cursor to a line to preview images on the right</div>
     </div>
 
     <div class="options-section">
@@ -286,9 +295,17 @@
   <div class="right-panel">
     <div class="preview-header">
       <div class="dot" id="preview-dot"></div>
-      <span id="preview-label">Image preview — move cursor to a character line</span>
+      <span id="preview-label">How it works</span>
     </div>
-    <iframe id="preview-frame" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    <div class="preview-placeholder" id="preview-placeholder">
+      <div class="big">🖼️</div>
+      <div>Enter character names on the left, one per line or comma separated.</div>
+      <div>Click <strong style="color:#c9d1d9">Generate Sheet</strong> — the app searches for images and assembles a 5×5 grid on a B4 card sheet.</div>
+      <div>When done, a <strong style="color:#3fb950">Download .docx</strong> button will appear.</div>
+      <div style="margin-top:8px; font-size:0.78rem;">
+        Preview images on <a href="https://duckduckgo.com/?ia=images&iax=images" target="_blank" rel="noopener">DuckDuckGo Images</a>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -299,49 +316,17 @@
     return text.split(/[\n,]/).map(s => s.trim()).filter(Boolean).slice(0, 25);
   }
 
-  function getCurrentLineName(textarea) {
-    const pos = textarea.selectionStart;
-    const before = textarea.value.substring(0, pos);
-    const lines = before.split(/[\n,]/);
-    return lines[lines.length - 1].trim();
-  }
-
   // ===== ELEMENTS =====
   const promptsEl    = document.getElementById("prompts");
   const generateBtn  = document.getElementById("generate-btn");
   const statusArea   = document.getElementById("status-area");
   const downloadArea = document.getElementById("download-area");
-  const previewFrame = document.getElementById("preview-frame");
   const previewLabel = document.getElementById("preview-label");
   const previewDot   = document.getElementById("preview-dot");
   const optPdf       = document.getElementById("opt-pdf");
   const optClaude    = document.getElementById("opt-claude");
   const optEmail     = document.getElementById("opt-email");
 
-  // ===== PREVIEW (debounced) =====
-  let previewTimer = null;
-  let lastPreviewName = "";
-
-  function updatePreview() {
-    const name = getCurrentLineName(promptsEl);
-    if (!name || name === lastPreviewName) return;
-    lastPreviewName = name;
-
-    previewLabel.textContent = `Previewing: ${name}`;
-    previewDot.classList.add("active");
-
-    const query = encodeURIComponent(name + " anime character");
-    previewFrame.src = `https://duckduckgo.com/?q=${query}&ia=images&iax=images`;
-  }
-
-  function schedulePreview() {
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(updatePreview, 500);
-  }
-
-  promptsEl.addEventListener("keyup", schedulePreview);
-  promptsEl.addEventListener("click", schedulePreview);
-  promptsEl.addEventListener("input", schedulePreview);
 
   // ===== STATUS HELPERS =====
   function clearStatus() {
