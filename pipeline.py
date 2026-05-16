@@ -529,6 +529,7 @@ def process_image(url, target_px, seen, seen_lock=None):
                 return None
             seen.add(h)
 
+        img = smart_crop(img)
         img.thumbnail(target_px)
         bg = Image.new("RGB", target_px, (255, 255, 255))
         x = (target_px[0] - img.width) // 2
