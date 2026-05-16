@@ -288,12 +288,13 @@
     <div class="options-section">
       <label class="section-label">Options</label>
 
+      <select id="opt-engine">
+        <option value="serpapi">Google (SerpAPI)</option>
+        <option value="brave">Brave</option>
+        <option value="test">Test (no search)</option>
+      </select>
+
       <div class="two-col">
-        <select id="opt-engine">
-          <option value="serpapi">Google (SerpAPI)</option>
-          <option value="brave">Brave</option>
-          <option value="test">Test (no search)</option>
-        </select>
         <select id="opt-paper">
           <option value="B4">B4 (257×364mm)</option>
           <option value="B5">B5 (182×257mm)</option>
@@ -301,15 +302,14 @@
           <option value="Letter">Letter (216×279mm)</option>
           <option value="A3">A3 (297×420mm)</option>
         </select>
+        <select id="opt-layout">
+          <option value="5x5">5×5 (25 cards)</option>
+          <option value="5x6">5×6 (30 cards)</option>
+          <option value="4x4">4×4 (16 cards)</option>
+          <option value="3x3">3×3 (9 cards)</option>
+          <option value="2x2">2×2 (4 cards)</option>
+        </select>
       </div>
-
-      <select id="opt-layout">
-        <option value="5x5">5×5 (25 cards)</option>
-        <option value="5x6">5×6 (30 cards)</option>
-        <option value="4x4">4×4 (16 cards)</option>
-        <option value="3x3">3×3 (9 cards)</option>
-        <option value="2x2">2×2 (4 cards)</option>
-      </select>
 
       <label class="checkbox-row">
         <input type="checkbox" id="opt-pdf" />
