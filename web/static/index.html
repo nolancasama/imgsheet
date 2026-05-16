@@ -256,6 +256,25 @@
     .preview-placeholder .big { font-size: 2.5rem; }
     .preview-placeholder a { color: #1f6feb; text-decoration: none; }
     .preview-placeholder a:hover { text-decoration: underline; }
+
+    .image-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      padding: 12px;
+      overflow-y: auto;
+      background: #0d1117;
+    }
+
+    .image-grid img {
+      width: 100%;
+      aspect-ratio: 7 / 10;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #161b22;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -324,7 +343,7 @@
       <div class="dot" id="preview-dot"></div>
       <span id="preview-label">How it works</span>
     </div>
-    <div class="preview-placeholder" id="preview-placeholder">
+    <div class="preview-placeholder" id="preview-placeholder" style="flex:1">
       <div class="big">🖼️</div>
       <div>Enter character names on the left, one per line or comma separated.</div>
       <div>Click <strong style="color:#c9d1d9">Generate Sheet</strong> — the app searches for images and assembles a 5×5 grid on a B4 card sheet.</div>
@@ -333,6 +352,7 @@
         Preview images on <a href="https://duckduckgo.com/?ia=images&iax=images" target="_blank" rel="noopener">DuckDuckGo Images</a>
       </div>
     </div>
+    <div class="image-grid" id="image-grid" style="display:none"></div>
   </div>
 
 </div>
@@ -348,8 +368,10 @@
   const generateBtn  = document.getElementById("generate-btn");
   const statusArea   = document.getElementById("status-area");
   const downloadArea = document.getElementById("download-area");
-  const previewLabel = document.getElementById("preview-label");
-  const previewDot   = document.getElementById("preview-dot");
+  const previewLabel      = document.getElementById("preview-label");
+  const previewDot        = document.getElementById("preview-dot");
+  const previewPlaceholder = document.getElementById("preview-placeholder");
+  const imageGrid         = document.getElementById("image-grid");
   const optEngine    = document.getElementById("opt-engine");
   const optRandomize = document.getElementById("opt-randomize");
   const optClaude    = document.getElementById("opt-claude");
@@ -358,9 +380,28 @@
 
 
   // ===== STATUS HELPERS =====
+  function showGrid(jobId, count) {
+    imageGrid.innerHTML = "";
+    for (let i = 0; i < count; i++) {
+      const img = document.createElement("img");
+      img.src = `/image/${jobId}/${i}`;
+      img.alt = `Card ${i + 1}`;
+      imageGrid.appendChild(img);
+    }
+    previewPlaceholder.style.display = "none";
+    imageGrid.style.display = "grid";
+    previewLabel.textContent = `Preview — ${count} cards`;
+    previewDot.classList.add("active");
+  }
+
   function clearStatus() {
     statusArea.innerHTML = "";
     downloadArea.innerHTML = "";
+    imageGrid.style.display = "none";
+    imageGrid.innerHTML = "";
+    previewPlaceholder.style.display = "flex";
+    previewLabel.textContent = "How it works";
+    previewDot.classList.remove("active");
   }
 
   function appendStatus(text, cls = "msg") {
@@ -432,6 +473,8 @@
       link.className = "download-link";
       link.textContent = "Download .docx";
       downloadArea.appendChild(link);
+
+      showGrid(e.data, 25);
     });
 
     evtSource.addEventListener("error", (e) => {

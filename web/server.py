@@ -139,6 +139,21 @@ def progress(job_id: str):
     )
 
 
+@app.get("/image/{job_id}/{idx}")
+def get_image(job_id: str, idx: int):
+    job = jobs.get(job_id)
+    if not job or not job["result"]:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Job not found")
+    all_paths = []
+    for cr in job["result"].characters:
+        all_paths.extend(cr.image_paths)
+    if idx < 0 or idx >= len(all_paths):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(all_paths[idx], media_type="image/jpeg")
+
+
 @app.get("/download/{job_id}")
 def download(job_id: str):
     job = jobs.get(job_id)
