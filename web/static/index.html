@@ -213,8 +213,7 @@
     .card-wrapper {
       position: relative; overflow: hidden;
       border-radius: 5px; background: #161b22; cursor: grab;
-      aspect-ratio: 7 / 10;
-      width: 100%;
+      width: 100%; height: 100%;
     }
     .card-wrapper:active { cursor: grabbing; }
     .card-wrapper img {
@@ -502,11 +501,21 @@
   }
 
   // ===== GRID =====
+  function calcRowHeight() {
+    const pad = 20, gap = 4;
+    const gridW = imageGrid.clientWidth - pad;
+    const colW = (gridW - gap * (currentCols - 1)) / currentCols;
+    return Math.round(colW * 10 / 7);
+  }
+
   function showGrid(jobId, count, cols, isBack = false) {
     imageGrid.innerHTML = '';
     activeJobId = jobId;
     currentCols = cols || currentCols;
     imageGrid.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
+
+    openModal(); // open first so clientWidth is measurable
+    imageGrid.style.gridAutoRows = calcRowHeight() + 'px';
 
     const urlPrefix = isBack ? 'back_image' : 'image';
     for (let i = 0; i < count; i++) {
@@ -516,9 +525,12 @@
     modalTitle.textContent = isBack
       ? `Back sheet — ${count} cards (columns mirrored)`
       : `${count} cards`;
-
-    openModal();
   }
+
+  window.addEventListener('resize', () => {
+    if (!activeJobId) return;
+    imageGrid.style.gridAutoRows = calcRowHeight() + 'px';
+  });
 
   function switchSheet(side) {
     if (side === currentSheet || !activeJobId) return;
