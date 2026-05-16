@@ -53,6 +53,13 @@ COMPRESSION_THRESHOLD = 0.04
 CENTER_BIAS_RATIO = 0.35
 MAX_CLAUDE_CALLS_PER_PROMPT = 15
 
+PAPER_SIZES = {
+    "B4":     (257, 364),
+    "A4":     (210, 297),
+    "Letter": (216, 279),
+    "A3":     (297, 420),
+}
+
 BLOCKED_DOMAINS = [
     "pinterest.com", "pinterest.co",
     "shutterstock.com", "gettyimages.com",
@@ -114,13 +121,17 @@ class PipelineOptions:
     export_pdf: bool = False
     randomize: bool = False
     search_engine: str = "serpapi"
-    send_email_to: str = ""  # empty = don't send
+    send_email_to: str = ""
+    rows: int = 5
+    cols: int = 5
+    paper_size: str = "B4"
 
 
 @dataclass
 class CharacterResult:
     prompt: str
-    image_paths: list  # list of str paths
+    image_paths: list        # selected images for the sheet
+    candidate_paths: list = field(default_factory=list)  # all passing candidates
 
 
 @dataclass
@@ -526,35 +537,35 @@ def process_image(url, target_px, seen, seen_lock=None):
 # =========================
 # DOC
 # =========================
-def create_doc(image_paths, output_name):
+def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4"):
+    w_mm, h_mm = PAPER_SIZES.get(paper_size, PAPER_SIZES["B4"])
     doc = Document()
     section = doc.sections[0]
-    section.page_width = Mm(B4_WIDTH_MM)
-    section.page_height = Mm(B4_HEIGHT_MM)
+    section.page_width = Mm(w_mm)
+    section.page_height = Mm(h_mm)
     section.top_margin = Mm(PAGE_MARGIN_MM)
     section.bottom_margin = Mm(PAGE_MARGIN_MM)
     section.left_margin = Mm(PAGE_MARGIN_MM)
     section.right_margin = Mm(PAGE_MARGIN_MM)
 
-    table = doc.add_table(rows=ROWS, cols=COLS)
+    table = doc.add_table(rows=rows, cols=cols)
 
-    # Light gray cut lines between cards
     tblBorders = OxmlElement('w:tblBorders')
     for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
         border = OxmlElement(f'w:{side}')
         border.set(qn('w:val'), 'single')
-        border.set(qn('w:sz'), '4')      # 0.5pt
+        border.set(qn('w:sz'), '4')
         border.set(qn('w:space'), '0')
         border.set(qn('w:color'), 'CCCCCC')
         tblBorders.append(border)
     table._tbl.tblPr.append(tblBorders)
 
-    usable_w = B4_WIDTH_MM - (PAGE_MARGIN_MM * 2)
-    img_w = (usable_w / COLS) - PADDING_MM
+    usable_w = w_mm - (PAGE_MARGIN_MM * 2)
+    img_w = (usable_w / cols) - PADDING_MM
 
     i = 0
-    for r in range(ROWS):
-        for c in range(COLS):
+    for r in range(rows):
+        for c in range(cols):
             if i >= len(image_paths):
                 break
             cell = table.cell(r, c)
@@ -622,7 +633,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
 
     seen = set()
 
-    total = ROWS * COLS
+    total = options.rows * options.cols
     base, extra = divmod(total, len(prompts))
     prompt_counts = [base + 1 if i < extra else base for i in range(len(prompts))]
 
@@ -653,55 +664,57 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                 raise InterruptedError("Cancelled by user.")
 
             prompt, needed, urls = search_results[i]
-            count = 0
+            char_candidate_paths = []
             char_paths = []
 
-            # Phase 1: parallel downloads + algorithm filters
-            passing = []
+            # Phase 1: parallel downloads — save every passing image to disk immediately
             with ThreadPoolExecutor(max_workers=12) as executor:
                 futures = {executor.submit(process_image, url, (700, 1000), seen, seen_lock): url for url in urls}
                 for future in as_completed(futures):
                     if cancel_event and cancel_event.is_set():
                         for f in futures:
                             f.cancel()
-                        character_results.append(CharacterResult(prompt=prompt, image_paths=char_paths))
+                        character_results.append(CharacterResult(
+                            prompt=prompt, image_paths=[], candidate_paths=char_candidate_paths
+                        ))
                         raise InterruptedError("Cancelled by user.")
                     img = future.result()
                     if img:
-                        passing.append(img)
-                    if len(passing) >= MAX_CLAUDE_CALLS_PER_PROMPT:
+                        path = os.path.join(TEMP_DIR, f"c{i}_{len(char_candidate_paths)}.jpg")
+                        img.save(path, "JPEG", quality=90)
+                        char_candidate_paths.append(path)
+                    if len(char_candidate_paths) >= MAX_CLAUDE_CALLS_PER_PROMPT:
                         for f in futures:
                             f.cancel()
                         break
 
-            # Phase 2: Claude checks in parallel (up to 4 at once)
-            if options.use_claude and passing:
-                on_progress(f"Claude checking {len(passing)} images for {prompt}...")
+            # Phase 2: select from candidates (Claude or auto)
+            if options.use_claude and char_candidate_paths:
+                on_progress(f"Claude checking {len(char_candidate_paths)} images for {prompt}...")
                 with ThreadPoolExecutor(max_workers=4) as cex:
-                    cfuts = {cex.submit(claude_vision_check, img, prompt): img for img in passing}
+                    cfuts = {
+                        cex.submit(claude_vision_check, Image.open(p).convert("RGB"), prompt): p
+                        for p in char_candidate_paths
+                    }
                     for cf in as_completed(cfuts):
-                        if count >= needed:
+                        if len(char_paths) >= needed:
                             for f in cfuts:
                                 f.cancel()
                             break
-                        img = cfuts[cf]
+                        p = cfuts[cf]
                         if cf.result():
-                            on_progress(f"{prompt}: found image {count + 1}/{needed}")
-                            path = os.path.join(TEMP_DIR, f"{len(all_images)}.jpg")
-                            img.save(path)
-                            all_images.append(path)
-                            char_paths.append(path)
-                            count += 1
+                            on_progress(f"{prompt}: accepted image {len(char_paths) + 1}/{needed}")
+                            char_paths.append(p)
+                            all_images.append(p)
             else:
-                for img in passing[:needed]:
-                    on_progress(f"{prompt}: found image {count + 1}/{needed}")
-                    path = os.path.join(TEMP_DIR, f"{len(all_images)}.jpg")
-                    img.save(path)
-                    all_images.append(path)
-                    char_paths.append(path)
-                    count += 1
+                char_paths = char_candidate_paths[:needed]
+                all_images.extend(char_paths)
+                for j in range(len(char_paths)):
+                    on_progress(f"{prompt}: image {j + 1}/{len(char_paths)}")
 
-            character_results.append(CharacterResult(prompt=prompt, image_paths=char_paths))
+            character_results.append(CharacterResult(
+                prompt=prompt, image_paths=char_paths, candidate_paths=char_candidate_paths
+            ))
 
         # Redistribute unfilled slots round-robin across all prompts
         shortfall = total - len(all_images)
@@ -729,7 +742,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                             continue
                         if options.use_claude and not claude_vision_check(img, cr.prompt):
                             continue
-                        path = os.path.join(TEMP_DIR, f"{len(all_images)}.jpg")
+                        path = os.path.join(TEMP_DIR, f"sf_{len(all_images)}.jpg")
                         img.save(path)
                         all_images.append(path)
                         cr.image_paths.append(path)
@@ -746,7 +759,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
     output_docx = os.path.join(output_dir, f"output_{timestamp}.docx")
 
     on_progress("Building document...")
-    create_doc(all_images, output_docx)
+    create_doc(all_images, output_docx, options.rows, options.cols, options.paper_size)
 
     output_pdf = None
     if options.export_pdf:

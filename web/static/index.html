@@ -27,254 +27,192 @@
       flex-shrink: 0;
     }
 
-    header h1 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #f0f6fc;
-      letter-spacing: 0.3px;
-    }
-
+    header h1 { font-size: 1.1rem; font-weight: 600; color: #f0f6fc; }
     header .badge {
-      font-size: 0.7rem;
-      background: #1f6feb;
-      color: #fff;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-weight: 500;
+      font-size: 0.7rem; background: #1f6feb; color: #fff;
+      padding: 2px 8px; border-radius: 20px; font-weight: 500;
     }
 
-    .layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
+    .layout { display: flex; flex: 1; overflow: hidden; }
 
     /* ===== LEFT PANEL ===== */
     .left-panel {
-      width: 340px;
+      width: 300px;
       flex-shrink: 0;
       background: #161b22;
       border-right: 1px solid #30363d;
       display: flex;
       flex-direction: column;
-      padding: 20px 18px;
-      gap: 16px;
+      padding: 16px 14px;
+      gap: 12px;
       overflow-y: auto;
     }
 
-    label {
-      font-size: 0.8rem;
+    label.section-label {
+      font-size: 0.75rem;
       color: #8b949e;
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
 
     textarea {
-      width: 100%;
-      height: 160px;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      color: #e1e4e8;
-      font-size: 0.95rem;
-      padding: 10px 12px;
-      resize: vertical;
-      font-family: inherit;
-      line-height: 1.5;
-      transition: border-color 0.15s;
-      outline: none;
+      width: 100%; height: 140px;
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      color: #e1e4e8; font-size: 0.92rem; padding: 9px 11px;
+      resize: vertical; font-family: inherit; line-height: 1.5;
+      transition: border-color 0.15s; outline: none;
     }
-
     textarea:focus { border-color: #1f6feb; }
     textarea::placeholder { color: #484f58; }
 
-    .options-section {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
+    .options-section { display: flex; flex-direction: column; gap: 8px; }
+
+    .two-col { display: flex; gap: 8px; }
+    .two-col > * { flex: 1; }
 
     .checkbox-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      user-select: none;
+      display: flex; align-items: center; gap: 9px;
+      cursor: pointer; user-select: none;
     }
-
     .checkbox-row input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: #1f6feb;
+      width: 15px; height: 15px; accent-color: #1f6feb; cursor: pointer;
+    }
+    .checkbox-row span { font-size: 0.88rem; color: #c9d1d9; }
+
+    input[type="text"], select {
+      width: 100%;
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      color: #e1e4e8; font-size: 0.88rem; padding: 7px 11px;
+      outline: none; font-family: inherit; transition: border-color 0.15s;
       cursor: pointer;
     }
-
-    .checkbox-row span {
-      font-size: 0.9rem;
-      color: #c9d1d9;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      color: #e1e4e8;
-      font-size: 0.9rem;
-      padding: 8px 12px;
-      outline: none;
-      transition: border-color 0.15s;
-      font-family: inherit;
-    }
-
-    input[type="text"]:focus { border-color: #1f6feb; }
+    input[type="text"] { cursor: text; }
+    input[type="text"]:focus, select:focus { border-color: #1f6feb; }
     input[type="text"]::placeholder { color: #484f58; }
 
-    select {
-      width: 100%;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      color: #e1e4e8;
-      font-size: 0.9rem;
-      padding: 8px 12px;
-      outline: none;
-      cursor: pointer;
-      font-family: inherit;
-      transition: border-color 0.15s;
-    }
-
-    select:focus { border-color: #1f6feb; }
-
     #generate-btn {
-      width: 100%;
-      padding: 11px;
-      background: #1f6feb;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
+      width: 100%; padding: 10px;
+      background: #1f6feb; color: #fff; border: none; border-radius: 8px;
+      font-size: 0.98rem; font-weight: 600; cursor: pointer;
       transition: background 0.15s, opacity 0.15s;
     }
-
     #generate-btn:hover:not(:disabled) { background: #388bfd; }
     #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .status-area {
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 10px 12px;
-      min-height: 80px;
-      max-height: 220px;
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      padding: 9px 11px; min-height: 70px; max-height: 180px;
       overflow-y: auto;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 0.78rem;
-      line-height: 1.6;
-      color: #8b949e;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.76rem; line-height: 1.6; color: #8b949e;
     }
-
     .status-area .msg { color: #c9d1d9; }
     .status-area .msg-error { color: #f85149; }
     .status-area .msg-success { color: #3fb950; }
 
     .download-link {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 9px 18px;
-      background: #238636;
-      color: #fff;
-      border-radius: 8px;
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-      transition: background 0.15s;
-      text-align: center;
-      width: 100%;
+      display: block; margin-top: 8px; padding: 8px 16px;
+      background: #238636; color: #fff; border-radius: 8px;
+      text-decoration: none; font-size: 0.88rem; font-weight: 600;
+      transition: background 0.15s; text-align: center;
     }
-
     .download-link:hover { background: #2ea043; }
-
-    .preview-hint {
-      font-size: 0.75rem;
-      color: #484f58;
-      text-align: center;
-      margin-top: 4px;
-    }
 
     /* ===== RIGHT PANEL ===== */
     .right-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background: #0d1117;
-      position: relative;
+      flex: 1; display: flex; flex-direction: column;
+      background: #0d1117; overflow: hidden;
     }
 
     .preview-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
-      flex-shrink: 0;
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 16px;
+      background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0;
     }
-
     .preview-header .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #30363d;
-      transition: background 0.2s;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #30363d; transition: background 0.2s;
     }
-
     .preview-header .dot.active { background: #1f6feb; }
-
-    #preview-label {
-      font-size: 0.85rem;
-      color: #8b949e;
+    #preview-label { font-size: 0.83rem; color: #8b949e; }
+    #modified-badge {
+      display: none; margin-left: auto;
+      font-size: 0.75rem; color: #f8c537; font-weight: 500;
     }
 
     .preview-placeholder {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      color: #484f58;
-      font-size: 0.9rem;
-      text-align: center;
-      padding: 40px;
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 11px; color: #484f58; font-size: 0.88rem;
+      text-align: center; padding: 40px;
     }
-
     .preview-placeholder .big { font-size: 2.5rem; }
     .preview-placeholder a { color: #1f6feb; text-decoration: none; }
     .preview-placeholder a:hover { text-decoration: underline; }
 
+    /* ===== IMAGE GRID ===== */
     .image-grid {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 4px;
-      padding: 12px;
-      overflow-y: auto;
-      background: #0d1117;
+      flex: 1; display: grid; gap: 4px;
+      padding: 10px; overflow-y: auto; background: #0d1117;
+      align-content: start;
     }
 
-    .image-grid img {
-      width: 100%;
-      aspect-ratio: 7 / 10;
-      object-fit: cover;
-      border-radius: 4px;
-      background: #161b22;
-      display: block;
+    /* ===== CARD ===== */
+    .card-wrapper {
+      position: relative; overflow: hidden;
+      border-radius: 5px; aspect-ratio: 7/10;
+      background: #161b22; cursor: grab;
+      transition: transform 0.1s;
     }
+    .card-wrapper:active { cursor: grabbing; }
+    .card-wrapper img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .card-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.58);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .card-wrapper:hover .card-overlay { opacity: 1; }
+    .card-btn {
+      background: rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,0.28);
+      color: #fff; border-radius: 5px;
+      padding: 5px 9px; cursor: pointer;
+      font-size: 0.82rem; transition: background 0.1s;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .card-btn:hover { background: rgba(255,255,255,0.28); }
+    .card-btn.del { border-color: rgba(248,81,73,0.5); }
+    .card-btn.del:hover { background: rgba(248,81,73,0.3); }
+    .card-wrapper.drag-over { outline: 2px solid #1f6feb; border-radius: 5px; }
+    .card-wrapper.dragging { opacity: 0.35; }
+
+    /* ===== CROP MODAL ===== */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+      padding: 20px; max-width: 90vw; max-height: 90vh;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .modal h2 { font-size: 1rem; color: #f0f6fc; }
+    #crop-canvas { max-width: 100%; max-height: 60vh; cursor: crosshair; border-radius: 6px; }
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-btns button {
+      padding: 7px 16px; border-radius: 6px; border: none;
+      cursor: pointer; font-size: 0.88rem; font-weight: 600;
+    }
+    #crop-confirm { background: #238636; color: #fff; }
+    #crop-cancel  { background: #30363d; color: #c9d1d9; }
   </style>
 </head>
 <body>
@@ -290,16 +228,34 @@
   <div class="left-panel">
 
     <div>
-      <label>Characters</label>
-      <textarea
-        id="prompts"
+      <label class="section-label">History</label>
+      <select id="history-select"><option value="">Load a previous sheet...</option></select>
+    </div>
+
+    <div>
+      <label class="section-label">Characters</label>
+      <textarea id="prompts"
         placeholder="Enter character names, one per line or comma separated&#10;&#10;e.g. Goku&#10;Naruto&#10;Luffy"
-        spellcheck="false"
-      ></textarea>
+        spellcheck="false"></textarea>
     </div>
 
     <div class="options-section">
-      <label>Options</label>
+      <label class="section-label">Options</label>
+
+      <div class="two-col">
+        <select id="opt-layout">
+          <option value="5x5">5×5 (25 cards)</option>
+          <option value="4x4">4×4 (16 cards)</option>
+          <option value="3x3">3×3 (9 cards)</option>
+          <option value="2x2">2×2 (4 cards)</option>
+        </select>
+        <select id="opt-paper">
+          <option value="B4">B4 (257×364mm)</option>
+          <option value="A4">A4 (210×297mm)</option>
+          <option value="Letter">Letter (216×279mm)</option>
+          <option value="A3">A3 (297×420mm)</option>
+        </select>
+      </div>
 
       <select id="opt-engine">
         <option value="serpapi">Google (SerpAPI)</option>
@@ -311,12 +267,10 @@
         <input type="checkbox" id="opt-randomize" />
         <span>Randomize results</span>
       </label>
-
       <label class="checkbox-row">
         <input type="checkbox" id="opt-claude" />
         <span>Filter with Claude Vision</span>
       </label>
-
       <label class="checkbox-row">
         <input type="checkbox" id="opt-pdf" />
         <span>Export PDF</span>
@@ -328,7 +282,7 @@
     <button id="generate-btn">Generate Sheet</button>
 
     <div>
-      <label>Status</label>
+      <label class="section-label">Status</label>
       <div class="status-area" id="status-area">
         <span style="color:#484f58">Ready. Enter characters and click Generate.</span>
       </div>
@@ -342,14 +296,15 @@
     <div class="preview-header">
       <div class="dot" id="preview-dot"></div>
       <span id="preview-label">How it works</span>
+      <span id="modified-badge">● Unsaved changes</span>
     </div>
-    <div class="preview-placeholder" id="preview-placeholder" style="flex:1">
+    <div class="preview-placeholder" id="preview-placeholder">
       <div class="big">🖼️</div>
       <div>Enter character names on the left, one per line or comma separated.</div>
-      <div>Click <strong style="color:#c9d1d9">Generate Sheet</strong> — the app searches for images and assembles a 5×5 grid on a B4 card sheet.</div>
-      <div>When done, a <strong style="color:#3fb950">Download .docx</strong> button will appear.</div>
-      <div style="margin-top:8px; font-size:0.78rem;">
-        Preview images on <a href="https://duckduckgo.com/?ia=images&iax=images" target="_blank" rel="noopener">DuckDuckGo Images</a>
+      <div>Click <strong style="color:#c9d1d9">Generate Sheet</strong> to search and assemble a card grid.</div>
+      <div>Hover cards to <strong style="color:#c9d1d9">swap</strong>, <strong style="color:#c9d1d9">delete</strong>, <strong style="color:#c9d1d9">upload</strong>, or <strong style="color:#c9d1d9">crop</strong>. Drag to rearrange.</div>
+      <div style="margin-top:6px; font-size:0.76rem;">
+        <a href="https://duckduckgo.com/?ia=images&iax=images" target="_blank" rel="noopener">Browse images on DuckDuckGo</a>
       </div>
     </div>
     <div class="image-grid" id="image-grid" style="display:none"></div>
@@ -357,80 +312,379 @@
 
 </div>
 
+<!-- CROP MODAL -->
+<div class="modal-backdrop" id="crop-modal">
+  <div class="modal">
+    <h2>Crop / Reframe</h2>
+    <canvas id="crop-canvas"></canvas>
+    <div style="font-size:0.78rem; color:#8b949e;">Drag to select crop area. Release to apply.</div>
+    <div class="modal-btns">
+      <button id="crop-cancel">Cancel</button>
+      <button id="crop-confirm">Apply Crop</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  // ===== STATE =====
+  let activeJobId = null;
+  let dragSrcIdx = null;
+  let currentCols = 5;
+  let cropCardIdx = null;
+  let cropSrc = null;
+  let cropRect = { x: 0, y: 0, w: 0, h: 0 };
+  let cropDragging = false;
+  let cropStart = { x: 0, y: 0 };
+
+  // ===== ELEMENTS =====
+  const promptsEl      = document.getElementById("prompts");
+  const generateBtn    = document.getElementById("generate-btn");
+  const statusArea     = document.getElementById("status-area");
+  const downloadArea   = document.getElementById("download-area");
+  const previewLabel   = document.getElementById("preview-label");
+  const previewDot     = document.getElementById("preview-dot");
+  const modifiedBadge  = document.getElementById("modified-badge");
+  const placeholder    = document.getElementById("preview-placeholder");
+  const imageGrid      = document.getElementById("image-grid");
+  const historySelect  = document.getElementById("history-select");
+  const optLayout      = document.getElementById("opt-layout");
+  const optPaper       = document.getElementById("opt-paper");
+  const optEngine      = document.getElementById("opt-engine");
+  const optRandomize   = document.getElementById("opt-randomize");
+  const optClaude      = document.getElementById("opt-claude");
+  const optPdf         = document.getElementById("opt-pdf");
+  const optEmail       = document.getElementById("opt-email");
+  const cropModal      = document.getElementById("crop-modal");
+  const cropCanvas     = document.getElementById("crop-canvas");
+  const cropCtx        = cropCanvas.getContext("2d");
+
   // ===== UTILITIES =====
   function parseNames(text) {
     return text.split(/[\n,]/).map(s => s.trim()).filter(Boolean).slice(0, 25);
   }
 
-  // ===== ELEMENTS =====
-  const promptsEl    = document.getElementById("prompts");
-  const generateBtn  = document.getElementById("generate-btn");
-  const statusArea   = document.getElementById("status-area");
-  const downloadArea = document.getElementById("download-area");
-  const previewLabel      = document.getElementById("preview-label");
-  const previewDot        = document.getElementById("preview-dot");
-  const previewPlaceholder = document.getElementById("preview-placeholder");
-  const imageGrid         = document.getElementById("image-grid");
-  const optEngine    = document.getElementById("opt-engine");
-  const optRandomize = document.getElementById("opt-randomize");
-  const optClaude    = document.getElementById("opt-claude");
-  const optPdf       = document.getElementById("opt-pdf");
-  const optEmail     = document.getElementById("opt-email");
-
-
-  // ===== STATUS HELPERS =====
-  function showGrid(jobId, count) {
-    imageGrid.innerHTML = "";
-    for (let i = 0; i < count; i++) {
-      const img = document.createElement("img");
-      img.src = `/image/${jobId}/${i}`;
-      img.alt = `Card ${i + 1}`;
-      imageGrid.appendChild(img);
-    }
-    previewPlaceholder.style.display = "none";
-    imageGrid.style.display = "grid";
-    previewLabel.textContent = `Preview — ${count} cards`;
-    previewDot.classList.add("active");
+  function getLayoutDims() {
+    const [r, c] = optLayout.value.split('x').map(Number);
+    return { rows: r, cols: c };
   }
 
+  // ===== HISTORY =====
+  const HISTORY_KEY = 'imgsheet_history';
+
+  function saveToHistory(names) {
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    const label = names.slice(0, 4).join(', ') + (names.length > 4 ? ` (+${names.length - 4})` : '');
+    history.unshift({ names, label, date: new Date().toLocaleDateString() });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 20)));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    historySelect.innerHTML = '<option value="">Load a previous sheet...</option>';
+    history.forEach((h, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${h.date} — ${h.label}`;
+      historySelect.appendChild(opt);
+    });
+  }
+
+  historySelect.addEventListener('change', () => {
+    const idx = historySelect.value;
+    if (idx === '') return;
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    const h = history[parseInt(idx)];
+    if (h) promptsEl.value = h.names.join('\n');
+    historySelect.value = '';
+  });
+
+  renderHistory();
+
+  // ===== STATUS =====
   function clearStatus() {
-    statusArea.innerHTML = "";
-    downloadArea.innerHTML = "";
-    imageGrid.style.display = "none";
-    imageGrid.innerHTML = "";
-    previewPlaceholder.style.display = "flex";
-    previewLabel.textContent = "How it works";
-    previewDot.classList.remove("active");
+    statusArea.innerHTML = '';
+    downloadArea.innerHTML = '';
+    modifiedBadge.style.display = 'none';
+    imageGrid.style.display = 'none';
+    imageGrid.innerHTML = '';
+    placeholder.style.display = 'flex';
+    previewLabel.textContent = 'How it works';
+    previewDot.classList.remove('active');
   }
 
-  function appendStatus(text, cls = "msg") {
-    const span = document.createElement("div");
-    span.className = cls;
-    span.textContent = text;
-    statusArea.appendChild(span);
+  function appendStatus(text, cls = 'msg') {
+    const div = document.createElement('div');
+    div.className = cls;
+    div.textContent = text;
+    statusArea.appendChild(div);
     statusArea.scrollTop = statusArea.scrollHeight;
   }
 
+  function markModified() {
+    modifiedBadge.style.display = 'inline';
+  }
+
+  // ===== GRID =====
+  function showGrid(jobId, count, cols) {
+    imageGrid.innerHTML = '';
+    activeJobId = jobId;
+    currentCols = cols || currentCols;
+    imageGrid.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
+
+    for (let i = 0; i < count; i++) {
+      imageGrid.appendChild(makeCard(jobId, i));
+    }
+
+    placeholder.style.display = 'none';
+    imageGrid.style.display = 'grid';
+    previewLabel.textContent = `Preview — ${count} cards`;
+    previewDot.classList.add('active');
+  }
+
+  function makeCard(jobId, idx) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'card-wrapper';
+    wrapper.dataset.idx = idx;
+    wrapper.draggable = true;
+
+    const img = document.createElement('img');
+    img.src = `/image/${jobId}/${idx}?t=${Date.now()}`;
+    img.alt = `Card ${idx + 1}`;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'card-overlay';
+
+    const swapBtn = btn('⟳', 'Swap image');
+    const delBtn  = btn('✕', 'Remove card', 'del');
+    const cropBtn = btn('✂', 'Crop / reframe');
+
+    const uploadLabel = document.createElement('label');
+    uploadLabel.className = 'card-btn';
+    uploadLabel.title = 'Upload custom image';
+    uploadLabel.textContent = '↑';
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    uploadLabel.appendChild(fileInput);
+
+    overlay.append(swapBtn, delBtn, cropBtn, uploadLabel);
+    wrapper.append(img, overlay);
+
+    // Events
+    swapBtn.addEventListener('click', (e) => { e.stopPropagation(); swapCard(idx); });
+    delBtn.addEventListener('click',  (e) => { e.stopPropagation(); deleteCard(idx); });
+    cropBtn.addEventListener('click', (e) => { e.stopPropagation(); openCrop(idx, img.src); });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) uploadCard(idx, e.target.files[0]);
+    });
+
+    // Drag to rearrange
+    wrapper.addEventListener('dragstart', (e) => {
+      dragSrcIdx = parseInt(wrapper.dataset.idx);
+      wrapper.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    wrapper.addEventListener('dragend', () => wrapper.classList.remove('dragging'));
+    wrapper.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files.length === 0) {
+        e.dataTransfer.dropEffect = 'move';
+        wrapper.classList.add('drag-over');
+      }
+    });
+    wrapper.addEventListener('dragleave', () => wrapper.classList.remove('drag-over'));
+    wrapper.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      wrapper.classList.remove('drag-over');
+      const toIdx = parseInt(wrapper.dataset.idx);
+      if (e.dataTransfer.files.length > 0) {
+        await uploadCard(toIdx, e.dataTransfer.files[0]);
+      } else if (dragSrcIdx !== null && dragSrcIdx !== toIdx) {
+        await reorderCard(dragSrcIdx, toIdx);
+      }
+      dragSrcIdx = null;
+    });
+
+    return wrapper;
+  }
+
+  function btn(text, title, extraClass) {
+    const b = document.createElement('button');
+    b.className = 'card-btn' + (extraClass ? ' ' + extraClass : '');
+    b.textContent = text;
+    b.title = title;
+    return b;
+  }
+
+  function refreshCardImg(idx) {
+    const wrapper = imageGrid.children[idx];
+    if (!wrapper) return;
+    wrapper.querySelector('img').src = `/image/${activeJobId}/${idx}?t=${Date.now()}`;
+  }
+
+  // ===== CARD OPERATIONS =====
+  async function swapCard(idx) {
+    const res = await fetch(`/swap/${activeJobId}/${idx}`, { method: 'POST' });
+    if (!res.ok) {
+      appendStatus('No more candidates for this card.', 'msg-error');
+      return;
+    }
+    refreshCardImg(idx);
+    markModified();
+  }
+
+  async function deleteCard(idx) {
+    const res = await fetch(`/card/${activeJobId}/${idx}`, { method: 'DELETE' });
+    if (!res.ok) return;
+    const data = await res.json();
+    imageGrid.children[idx].remove();
+    [...imageGrid.children].forEach((el, i) => el.dataset.idx = i);
+    previewLabel.textContent = `Preview — ${data.count} cards`;
+    markModified();
+  }
+
+  async function uploadCard(idx, file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`/upload/${activeJobId}/${idx}`, { method: 'POST', body: fd });
+    if (!res.ok) { appendStatus('Upload failed.', 'msg-error'); return; }
+    refreshCardImg(idx);
+    markModified();
+  }
+
+  async function reorderCard(fromIdx, toIdx) {
+    const count = imageGrid.children.length;
+    const order = [...Array(count).keys()];
+    order.splice(fromIdx, 1);
+    order.splice(toIdx, 0, fromIdx);
+
+    const res = await fetch(`/reorder/${activeJobId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order }),
+    });
+    if (!res.ok) return;
+
+    // Move DOM element
+    const movedEl = imageGrid.children[fromIdx];
+    const elements = [...imageGrid.children];
+    elements.splice(fromIdx, 1);
+    elements.splice(toIdx, 0, movedEl);
+    elements.forEach((el, i) => { el.dataset.idx = i; imageGrid.appendChild(el); });
+    markModified();
+  }
+
+  // ===== CROP =====
+  let cropImg = new window.Image();
+
+  function openCrop(idx, src) {
+    cropCardIdx = idx;
+    cropSrc = src.split('?')[0]; // strip cache buster
+    cropImg = new window.Image();
+    cropImg.crossOrigin = 'anonymous';
+    cropImg.onload = () => {
+      const maxW = Math.min(cropImg.width, window.innerWidth * 0.8);
+      const scale = maxW / cropImg.width;
+      cropCanvas.width  = Math.round(cropImg.width  * scale);
+      cropCanvas.height = Math.round(cropImg.height * scale);
+      cropRect = { x: 0, y: 0, w: cropCanvas.width, h: cropCanvas.height };
+      drawCrop();
+    };
+    cropImg.src = cropSrc;
+    cropModal.classList.add('open');
+  }
+
+  function drawCrop() {
+    cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+    cropCtx.drawImage(cropImg, 0, 0, cropCanvas.width, cropCanvas.height);
+    cropCtx.fillStyle = 'rgba(0,0,0,0.45)';
+    cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+    cropCtx.drawImage(
+      cropImg,
+      (cropRect.x / cropCanvas.width) * cropImg.width,
+      (cropRect.y / cropCanvas.height) * cropImg.height,
+      (cropRect.w / cropCanvas.width) * cropImg.width,
+      (cropRect.h / cropCanvas.height) * cropImg.height,
+      cropRect.x, cropRect.y, cropRect.w, cropRect.h
+    );
+    cropCtx.strokeStyle = '#1f6feb';
+    cropCtx.lineWidth = 2;
+    cropCtx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+  }
+
+  cropCanvas.addEventListener('mousedown', (e) => {
+    const r = cropCanvas.getBoundingClientRect();
+    cropStart = { x: e.clientX - r.left, y: e.clientY - r.top };
+    cropDragging = true;
+  });
+  cropCanvas.addEventListener('mousemove', (e) => {
+    if (!cropDragging) return;
+    const r = cropCanvas.getBoundingClientRect();
+    const cx = e.clientX - r.left;
+    const cy = e.clientY - r.top;
+    cropRect = {
+      x: Math.min(cropStart.x, cx),
+      y: Math.min(cropStart.y, cy),
+      w: Math.abs(cx - cropStart.x),
+      h: Math.abs(cy - cropStart.y),
+    };
+    drawCrop();
+  });
+  cropCanvas.addEventListener('mouseup', () => { cropDragging = false; });
+
+  document.getElementById('crop-cancel').addEventListener('click', () => {
+    cropModal.classList.remove('open');
+  });
+
+  document.getElementById('crop-confirm').addEventListener('click', async () => {
+    if (cropRect.w < 10 || cropRect.h < 10) {
+      cropModal.classList.remove('open');
+      return;
+    }
+    // Render cropped region to an offscreen canvas
+    const scaleX = cropImg.width  / cropCanvas.width;
+    const scaleY = cropImg.height / cropCanvas.height;
+    const off = document.createElement('canvas');
+    off.width  = Math.round(cropRect.w * scaleX);
+    off.height = Math.round(cropRect.h * scaleY);
+    off.getContext('2d').drawImage(
+      cropImg,
+      cropRect.x * scaleX, cropRect.y * scaleY,
+      off.width, off.height,
+      0, 0, off.width, off.height
+    );
+    off.toBlob(async (blob) => {
+      const fd = new FormData();
+      fd.append('file', blob, 'crop.jpg');
+      const res = await fetch(`/upload/${activeJobId}/${cropCardIdx}`, { method: 'POST', body: fd });
+      if (res.ok) { refreshCardImg(cropCardIdx); markModified(); }
+      cropModal.classList.remove('open');
+    }, 'image/jpeg', 0.92);
+  });
+
   // ===== GENERATE =====
-  generateBtn.addEventListener("click", async () => {
+  generateBtn.addEventListener('click', async () => {
     const names = parseNames(promptsEl.value);
     if (names.length === 0) {
-      appendStatus("Please enter at least one character name.", "msg-error");
+      appendStatus('Please enter at least one character name.', 'msg-error');
       return;
     }
 
     clearStatus();
     generateBtn.disabled = true;
-    generateBtn.textContent = "Generating…";
-    appendStatus(`Starting pipeline for: ${names.join(", ")}`, "msg");
+    generateBtn.textContent = 'Generating…';
+    appendStatus(`Starting pipeline for: ${names.join(', ')}`, 'msg');
+
+    const { rows, cols } = getLayoutDims();
+    currentCols = cols;
 
     let jobId;
-
     try {
-      const res = await fetch("/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompts: names,
           use_claude: optClaude.checked,
@@ -438,64 +692,59 @@
           randomize: optRandomize.checked,
           search_engine: optEngine.value,
           send_email_to: optEmail.value.trim(),
+          rows,
+          cols,
+          paper_size: optPaper.value,
         }),
       });
-
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Server error ${res.status}: ${err}`);
-      }
-
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
       jobId = data.job_id;
     } catch (e) {
-      appendStatus(`Error: ${e.message}`, "msg-error");
+      appendStatus(`Error: ${e.message}`, 'msg-error');
       generateBtn.disabled = false;
-      generateBtn.textContent = "Generate Sheet";
+      generateBtn.textContent = 'Generate Sheet';
       return;
     }
 
-    // Open SSE stream
     const evtSource = new EventSource(`/progress/${jobId}`);
 
-    evtSource.onmessage = (e) => {
-      appendStatus(e.data);
-    };
+    evtSource.onmessage = (e) => appendStatus(e.data);
 
-    evtSource.addEventListener("done", (e) => {
+    evtSource.addEventListener('done', async (e) => {
       evtSource.close();
-      appendStatus("Done! Your sheet is ready.", "msg-success");
+      appendStatus('Done! Your sheet is ready.', 'msg-success');
       generateBtn.disabled = false;
-      generateBtn.textContent = "Generate Sheet";
+      generateBtn.textContent = 'Generate Sheet';
 
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = `/download/${e.data}`;
-      link.className = "download-link";
-      link.textContent = "Download .docx";
+      link.className = 'download-link';
+      link.textContent = 'Download .docx';
       downloadArea.appendChild(link);
 
-      fetch(`/images/${e.data}`)
-        .then(r => r.json())
-        .then(d => showGrid(e.data, d.count))
-        .catch(() => showGrid(e.data, 25));
+      saveToHistory(names);
+
+      try {
+        const r = await fetch(`/images/${e.data}`);
+        const d = await r.json();
+        showGrid(e.data, d.count, cols);
+      } catch { showGrid(e.data, rows * cols, cols); }
     });
 
-    evtSource.addEventListener("error", (e) => {
+    evtSource.addEventListener('error', (e) => {
       evtSource.close();
-      const msg = e.data || "Unknown error";
-      appendStatus(`Error: ${msg}`, "msg-error");
+      appendStatus(`Error: ${e.data || 'Unknown error'}`, 'msg-error');
       generateBtn.disabled = false;
-      generateBtn.textContent = "Generate Sheet";
+      generateBtn.textContent = 'Generate Sheet';
     });
 
-    // Also handle network-level errors from EventSource
-    evtSource.onerror = (e) => {
-      // Only report if not already closed by our handlers
+    evtSource.onerror = () => {
       if (evtSource.readyState === EventSource.CLOSED) return;
       evtSource.close();
-      appendStatus("Connection lost. Check server.", "msg-error");
+      appendStatus('Connection lost.', 'msg-error');
       generateBtn.disabled = false;
-      generateBtn.textContent = "Generate Sheet";
+      generateBtn.textContent = 'Generate Sheet';
     };
   });
 </script>

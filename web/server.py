@@ -4,17 +4,18 @@ import uuid
 import queue as q_module
 import threading
 
-# Allow importing from parent directory (imgsheet/)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+from io import BytesIO
+from PIL import Image
 
-from pipeline import run_pipeline, PipelineOptions, PipelineResult
+from pipeline import run_pipeline, PipelineOptions, create_doc
 
 # =========================
 # SETUP
@@ -22,11 +23,12 @@ from pipeline import run_pipeline, PipelineOptions, PipelineResult
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="ImgSheet Web")
 
-# CORS for local dev
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,13 +37,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # =========================
 # JOB STORE
 # =========================
-jobs = {}  # job_id -> {queue: Queue, result: PipelineResult|None, error: str|None}
+# job_id -> {queue, result, error, options, cards, pools}
+# cards: [{"path": str, "char": str, "char_idx": int}, ...]
+# pools: {char_idx: [path, ...]}  remaining unused candidates
+jobs = {}
+
+
+def _init_card_state(job_id, result, options):
+    cards = []
+    pools = {}
+    for i, cr in enumerate(result.characters):
+        used = set(cr.image_paths)
+        pools[i] = [p for p in cr.candidate_paths if p not in used]
+        for path in cr.image_paths:
+            cards.append({"path": path, "char": cr.prompt, "char_idx": i})
+    jobs[job_id]["cards"] = cards
+    jobs[job_id]["pools"] = pools
+    jobs[job_id]["options"] = options
 
 
 # =========================
@@ -54,6 +71,13 @@ class GenerateRequest(BaseModel):
     randomize: bool = False
     search_engine: str = "serpapi"
     send_email_to: str = ""
+    rows: int = 5
+    cols: int = 5
+    paper_size: str = "B4"
+
+
+class ReorderBody(BaseModel):
+    order: List[int]
 
 
 # =========================
@@ -73,6 +97,9 @@ def generate(body: GenerateRequest):
         "queue": job_queue,
         "result": None,
         "error": None,
+        "options": None,
+        "cards": [],
+        "pools": {},
     }
 
     options = PipelineOptions(
@@ -81,6 +108,9 @@ def generate(body: GenerateRequest):
         randomize=body.randomize,
         search_engine=body.search_engine,
         send_email_to=body.send_email_to,
+        rows=body.rows,
+        cols=body.cols,
+        paper_size=body.paper_size,
     )
 
     def run():
@@ -90,6 +120,7 @@ def generate(body: GenerateRequest):
 
             result = run_pipeline(body.prompts, options, on_progress, output_dir=OUTPUTS_DIR)
             jobs[job_id]["result"] = result
+            _init_card_state(job_id, result, options)
             job_queue.put("__done__")
         except Exception as e:
             jobs[job_id]["error"] = str(e)
@@ -118,7 +149,6 @@ def progress(job_id: str):
             try:
                 msg = job_queue.get(timeout=60)
             except q_module.Empty:
-                # Timeout — send a keepalive comment and continue
                 yield ": keepalive\n\n"
                 continue
 
@@ -126,8 +156,7 @@ def progress(job_id: str):
                 yield f"event: done\ndata: {job_id}\n\n"
                 break
             elif msg.startswith("__error__:"):
-                error_msg = msg[len("__error__:"):]
-                yield f"event: error\ndata: {error_msg}\n\n"
+                yield f"event: error\ndata: {msg[len('__error__:'):]}\n\n"
                 break
             else:
                 yield f"data: {msg}\n\n"
@@ -139,46 +168,111 @@ def progress(job_id: str):
     )
 
 
-def _all_image_paths(job):
-    paths = []
-    for cr in job["result"].characters:
-        paths.extend(cr.image_paths)
-    return paths
-
-
 @app.get("/images/{job_id}")
 def list_images(job_id: str):
-    from fastapi import HTTPException
     job = jobs.get(job_id)
     if not job or not job["result"]:
         raise HTTPException(status_code=404, detail="Job not found")
-    return {"count": len(_all_image_paths(job))}
+    return {"count": len(job["cards"])}
 
 
 @app.get("/image/{job_id}/{idx}")
 def get_image(job_id: str, idx: int):
-    from fastapi import HTTPException
+    job = jobs.get(job_id)
+    if not job or not job["cards"]:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if idx < 0 or idx >= len(job["cards"]):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(job["cards"][idx]["path"], media_type="image/jpeg")
+
+
+@app.post("/swap/{job_id}/{card_idx}")
+def swap_card(job_id: str, card_idx: int):
     job = jobs.get(job_id)
     if not job or not job["result"]:
         raise HTTPException(status_code=404, detail="Job not found")
-    paths = _all_image_paths(job)
-    if idx < 0 or idx >= len(paths):
-        raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(paths[idx], media_type="image/jpeg")
+    cards = job["cards"]
+    if card_idx < 0 or card_idx >= len(cards):
+        raise HTTPException(status_code=404, detail="Card not found")
+    char_idx = cards[card_idx]["char_idx"]
+    pool = job["pools"].get(char_idx, [])
+    if not pool:
+        raise HTTPException(status_code=400, detail="No more candidates for this card")
+    old_path = cards[card_idx]["path"]
+    new_path = pool.pop(0)
+    pool.append(old_path)  # cycle old back to end
+    job["pools"][char_idx] = pool
+    cards[card_idx]["path"] = new_path
+    return {"ok": True}
+
+
+@app.delete("/card/{job_id}/{card_idx}")
+def remove_card(job_id: str, card_idx: int):
+    job = jobs.get(job_id)
+    if not job or not job["result"]:
+        raise HTTPException(status_code=404, detail="Job not found")
+    cards = job["cards"]
+    if card_idx < 0 or card_idx >= len(cards):
+        raise HTTPException(status_code=404, detail="Card not found")
+    removed = cards.pop(card_idx)
+    # Return removed image to pool so it can be swapped back in
+    char_idx = removed["char_idx"]
+    if char_idx >= 0:
+        job["pools"].setdefault(char_idx, []).insert(0, removed["path"])
+    return {"count": len(cards)}
+
+
+@app.post("/reorder/{job_id}")
+def reorder_cards(job_id: str, body: ReorderBody):
+    job = jobs.get(job_id)
+    if not job or not job["result"]:
+        raise HTTPException(status_code=404, detail="Job not found")
+    cards = job["cards"]
+    if len(body.order) != len(cards):
+        raise HTTPException(status_code=400, detail="Order length mismatch")
+    job["cards"] = [cards[i] for i in body.order]
+    return {"ok": True}
+
+
+@app.post("/upload/{job_id}/{card_idx}")
+async def upload_card(job_id: str, card_idx: int, file: UploadFile = File(...)):
+    job = jobs.get(job_id)
+    if not job or not job["result"]:
+        raise HTTPException(status_code=404, detail="Job not found")
+    content = await file.read()
+    try:
+        img = Image.open(BytesIO(content)).convert("RGB")
+        fname = f"upload_{job_id}_{card_idx}_{uuid.uuid4().hex[:6]}.jpg"
+        path = os.path.join(UPLOAD_DIR, fname)
+        img.save(path, "JPEG", quality=92)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image: {e}")
+    cards = job["cards"]
+    entry = {"path": path, "char": "upload", "char_idx": -1}
+    if card_idx < len(cards):
+        cards[card_idx] = entry
+    else:
+        cards.append(entry)
+    return {"ok": True}
 
 
 @app.get("/download/{job_id}")
 def download(job_id: str):
     job = jobs.get(job_id)
     if not job or not job["result"]:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Job not found or not complete")
 
-    file_path = job["result"].output_docx
-    filename = os.path.basename(file_path)
+    cards = job["cards"]
+    opts = job["options"]
+    paths = [c["path"] for c in cards]
 
+    # Rebuild doc from current card order and layout
+    output_path = job["result"].output_docx
+    create_doc(paths, output_path, opts.rows, opts.cols, opts.paper_size)
+
+    filename = os.path.basename(output_path)
     return FileResponse(
-        path=file_path,
+        path=output_path,
         filename=filename,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},

@@ -36,6 +36,7 @@ class MainWindow(QMainWindow):
         if not prompts:
             self.character_panel.set_status("Error: Enter at least one character name.")
             return
+        self._current_options = options
         self.character_panel.set_generating(True)
         self.character_panel.set_status("Starting...")
 
@@ -81,13 +82,17 @@ class MainWindow(QMainWindow):
         import os
         from datetime import datetime
         from pipeline import fill_to_count_spread, create_doc
+        opts = getattr(self, '_current_options', None)
+        rows = opts.rows if opts else 5
+        cols = opts.cols if opts else 5
+        paper = opts.paper_size if opts else "B4"
         self.character_panel.set_status("Building partial sheet...")
-        filled = fill_to_count_spread(character_results, 25)
+        filled = fill_to_count_spread(character_results, rows * cols)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
         output_docx = os.path.join(downloads_dir, f"output_{timestamp}.docx")
         try:
-            create_doc(filled, output_docx)
+            create_doc(filled, output_docx, rows, cols, paper)
             self.character_panel.set_status(f"Done! Saved to Downloads:\n{os.path.basename(output_docx)}")
         except Exception as e:
             self.character_panel.set_status(f"Error: {e}")
