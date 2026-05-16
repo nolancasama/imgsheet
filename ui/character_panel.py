@@ -52,7 +52,7 @@ class CharacterPanel(QWidget):
 
         layout_row = QHBoxLayout()
         self._paper_combo = QComboBox()
-        self._paper_combo.addItems(["B4", "A4", "Letter", "A3"])
+        self._paper_combo.addItems(["B4", "B5", "A4", "Letter", "A3"])
         self._paper_combo.currentIndexChanged.connect(self._on_paper_changed)
         self._layout_combo = QComboBox()
         self._layout_combo.addItems(["5×5 (25)", "5×6 (30)", "4×4 (16)", "3×3 (9)", "2×2 (4)"])
@@ -124,8 +124,8 @@ class CharacterPanel(QWidget):
         return parts[:25]
 
     def _on_paper_changed(self):
-        paper = ["B4", "A4", "Letter", "A3"][self._paper_combo.currentIndex()]
-        target = {"B4": "5×5 (25)", "A3": "5×6 (30)", "A4": "4×4 (16)", "Letter": "4×4 (16)"}
+        paper = ["B4", "B5", "A4", "Letter", "A3"][self._paper_combo.currentIndex()]
+        target = {"B4": "5×5 (25)", "B5": "3×3 (9)", "A3": "5×6 (30)", "A4": "4×4 (16)", "Letter": "4×4 (16)"}
         label = target.get(paper)
         if label:
             idx = self._layout_combo.findText(label)
@@ -135,7 +135,7 @@ class CharacterPanel(QWidget):
     def get_options(self) -> PipelineOptions:
         engine = ["serpapi", "brave", "test"][self._engine_combo.currentIndex()]
         rows, cols = [(5,5),(5,6),(4,4),(3,3),(2,2)][self._layout_combo.currentIndex()]
-        paper = ["B4", "A4", "Letter", "A3"][self._paper_combo.currentIndex()]
+        paper = ["B4", "B5", "A4", "Letter", "A3"][self._paper_combo.currentIndex()]
         return PipelineOptions(
             export_pdf=self._pdf_check.isChecked(),
             search_engine=engine,

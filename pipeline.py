@@ -55,6 +55,7 @@ MAX_CLAUDE_CALLS_PER_PROMPT = 15
 
 PAPER_SIZES = {
     "B4":     (257, 364),
+    "B5":     (182, 257),
     "A4":     (210, 297),
     "Letter": (216, 279),
     "A3":     (297, 420),

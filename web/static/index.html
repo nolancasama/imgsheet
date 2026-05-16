@@ -296,6 +296,7 @@
         </select>
         <select id="opt-paper">
           <option value="B4">B4 (257×364mm)</option>
+          <option value="B5">B5 (182×257mm)</option>
           <option value="A4">A4 (210×297mm)</option>
           <option value="Letter">Letter (216×279mm)</option>
           <option value="A3">A3 (297×420mm)</option>
@@ -447,7 +448,7 @@
 
   renderHistory();
 
-  const PAPER_LAYOUTS = { B4: '5x5', A3: '5x6', A4: '4x4', Letter: '4x4' };
+  const PAPER_LAYOUTS = { B4: '5x5', B5: '3x3', A3: '5x6', A4: '4x4', Letter: '4x4' };
   optPaper.addEventListener('change', () => {
     const layout = PAPER_LAYOUTS[optPaper.value];
     if (layout) optLayout.value = layout;
