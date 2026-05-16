@@ -501,15 +501,11 @@
   }
 
   // ===== GRID =====
-  function calcRowHeight(count) {
-    const cols = currentCols, pad = 20, gap = 4;
-    const rows = Math.ceil(count / cols);
+  function calcRowHeight() {
+    const pad = 20, gap = 4;
     const gridW = imageGrid.clientWidth - pad;
-    const colW = (gridW - gap * (cols - 1)) / cols;
-    const naturalH = Math.round(colW * 10 / 7);
-    const gridH = imageGrid.clientHeight - pad;
-    const fitH = Math.floor((gridH - gap * (rows - 1)) / rows);
-    return Math.max(40, Math.min(naturalH, fitH));
+    const colW = (gridW - gap * (currentCols - 1)) / currentCols;
+    return Math.round(colW * 10 / 7);
   }
 
   function showGrid(jobId, count, cols, isBack = false) {
@@ -518,8 +514,8 @@
     currentCols = cols || currentCols;
     imageGrid.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
 
-    openModal(); // open first so clientWidth/Height are measurable
-    imageGrid.style.gridAutoRows = calcRowHeight(count) + 'px';
+    openModal(); // open first so clientWidth is measurable
+    imageGrid.style.gridAutoRows = calcRowHeight() + 'px';
 
     const urlPrefix = isBack ? 'back_image' : 'image';
     for (let i = 0; i < count; i++) {
@@ -533,7 +529,7 @@
 
   window.addEventListener('resize', () => {
     if (!activeJobId) return;
-    imageGrid.style.gridAutoRows = calcRowHeight(imageGrid.children.length) + 'px';
+    imageGrid.style.gridAutoRows = calcRowHeight() + 'px';
   });
 
   function switchSheet(side) {
