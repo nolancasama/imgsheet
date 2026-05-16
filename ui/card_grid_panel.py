@@ -267,14 +267,15 @@ class CardGridPanel(QWidget):
         if not self._cards:
             return
         from datetime import datetime
-        from pipeline import create_doc
+        from pipeline import create_doc, make_sheet_filename
         opts = self._options
         rows = opts.rows if opts else 5
         cols = opts.cols if opts else 5
         paper = opts.paper_size if opts else "B4"
         paths = [c.path for c in self._cards]
         downloads = os.path.join(os.path.expanduser("~"), "Downloads")
-        name = f"output_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+        prompts = [cr.prompt for cr in self._result.characters] if self._result else []
+        name = make_sheet_filename(prompts, datetime.now().strftime('%Y%m%d_%H%M%S'))
         out = os.path.join(downloads, name)
         try:
             create_doc(paths, out, rows, cols, paper)

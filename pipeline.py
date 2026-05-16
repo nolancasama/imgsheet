@@ -1,4 +1,5 @@
 import os
+import re
 import math
 import random
 import base64
@@ -649,6 +650,15 @@ def find_soffice():
 # =========================
 # MAIN PIPELINE
 # =========================
+def make_sheet_filename(prompts, timestamp, suffix=""):
+    joined = "_".join(prompts)
+    safe = re.sub(r'[^\w]', '_', joined)
+    safe = re.sub(r'_+', '_', safe).strip('_')
+    if len(safe) > 60:
+        safe = safe[:60].rstrip('_')
+    return f"{safe}_{timestamp}{suffix}.docx"
+
+
 def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[[str], None], cancel_event=None, output_dir=None) -> PipelineResult:
     clear_temp_dir()
 
@@ -834,7 +844,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
     if output_dir is None:
         output_dir = os.path.join(os.path.expanduser("~"), "Downloads")
     os.makedirs(output_dir, exist_ok=True)
-    output_docx = os.path.join(output_dir, f"output_{timestamp}.docx")
+    output_docx = os.path.join(output_dir, make_sheet_filename(prompts, timestamp))
 
     back_paths_for_doc = None
     if options.double_sided and all_back_images:
