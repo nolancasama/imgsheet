@@ -539,16 +539,25 @@ def process_image(url, target_px, seen, seen_lock=None):
 # =========================
 # DOC
 # =========================
+# Reference cell size derived from B4 5x5 — fixed across all paper sizes
+_B4_USABLE_W = PAPER_SIZES["B4"][0] - PAGE_MARGIN_MM * 2
+FIXED_CELL_W_MM = (_B4_USABLE_W / 5) - PADDING_MM  # 45.4mm
+
+
 def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4"):
     w_mm, h_mm = PAPER_SIZES.get(paper_size, PAPER_SIZES["B4"])
     doc = Document()
     section = doc.sections[0]
     section.page_width = Mm(w_mm)
     section.page_height = Mm(h_mm)
+
+    # Centre the table by computing side margins so cells stay at fixed size
+    grid_w = cols * (FIXED_CELL_W_MM + PADDING_MM)
+    side_margin = max(PAGE_MARGIN_MM, (w_mm - grid_w) / 2)
     section.top_margin = Mm(PAGE_MARGIN_MM)
     section.bottom_margin = Mm(PAGE_MARGIN_MM)
-    section.left_margin = Mm(PAGE_MARGIN_MM)
-    section.right_margin = Mm(PAGE_MARGIN_MM)
+    section.left_margin = Mm(side_margin)
+    section.right_margin = Mm(side_margin)
 
     table = doc.add_table(rows=rows, cols=cols)
 
@@ -562,9 +571,6 @@ def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4"):
         tblBorders.append(border)
     table._tbl.tblPr.append(tblBorders)
 
-    usable_w = w_mm - (PAGE_MARGIN_MM * 2)
-    img_w = (usable_w / cols) - PADDING_MM
-
     i = 0
     for r in range(rows):
         for c in range(cols):
@@ -574,7 +580,7 @@ def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4"):
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
             para = cell.paragraphs[0]
             para.alignment = 1
-            para.add_run().add_picture(image_paths[i], width=Mm(img_w))
+            para.add_run().add_picture(image_paths[i], width=Mm(FIXED_CELL_W_MM))
             i += 1
 
     doc.save(output_name)
