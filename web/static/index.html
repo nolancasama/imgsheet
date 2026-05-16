@@ -244,6 +244,7 @@
       <div class="two-col">
         <select id="opt-layout">
           <option value="5x5">5×5 (25 cards)</option>
+          <option value="5x6">5×6 (30 cards)</option>
           <option value="4x4">4×4 (16 cards)</option>
           <option value="3x3">3×3 (9 cards)</option>
           <option value="2x2">2×2 (4 cards)</option>
@@ -399,6 +400,13 @@
   });
 
   renderHistory();
+
+  // Auto-select optimal layout when paper size changes
+  const PAPER_LAYOUTS = { B4: '5x5', A3: '5x6', A4: '4x4', Letter: '4x4' };
+  optPaper.addEventListener('change', () => {
+    const layout = PAPER_LAYOUTS[optPaper.value];
+    if (layout) optLayout.value = layout;
+  });
 
   // ===== STATUS =====
   function clearStatus() {
