@@ -485,6 +485,8 @@ def search_images(query, count, start=0, engine="serpapi"):
         raw = _search_serpapi(query, count, start)
     elif engine == "brave":
         raw = _search_brave(query, count, start)
+    elif engine == "test":
+        return []  # test mode skips URL search entirely
     else:
         raw = _search_ddg(query, count, start)
     urls = _filter_and_rank(raw)
@@ -666,6 +668,24 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
             prompt, needed, urls = search_results[i]
             char_candidate_paths = []
             char_paths = []
+
+            # Test mode: generate solid-color placeholder images, no network
+            if options.search_engine == "test":
+                pool_size = needed * 3
+                for j in range(pool_size):
+                    h = hash(f"{prompt}{j}") & 0xFFFFFF
+                    color = ((h >> 16) & 0xFF, (h >> 8) & 0xFF, h & 0xFF)
+                    img = Image.new("RGB", (700, 1000), color)
+                    path = os.path.join(TEMP_DIR, f"c{i}_{j}.jpg")
+                    img.save(path, "JPEG", quality=90)
+                    char_candidate_paths.append(path)
+                char_paths = char_candidate_paths[:needed]
+                all_images.extend(char_paths)
+                character_results.append(CharacterResult(
+                    prompt=prompt, image_paths=char_paths, candidate_paths=char_candidate_paths
+                ))
+                on_progress(f"{prompt}: {len(char_paths)} placeholder images")
+                continue
 
             # Phase 1: parallel downloads — save every passing image to disk immediately
             with ThreadPoolExecutor(max_workers=12) as executor:

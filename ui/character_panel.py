@@ -53,7 +53,7 @@ class CharacterPanel(QWidget):
         options_layout.addWidget(self._randomize_check)
 
         self._engine_combo = QComboBox()
-        self._engine_combo.addItems(["Google (SerpAPI)", "Brave", "DuckDuckGo (free)"])
+        self._engine_combo.addItems(["Google (SerpAPI)", "Brave", "Test (no search)"])
         self._engine_combo.setCurrentIndex(0)
         options_layout.addWidget(self._engine_combo)
 
@@ -125,7 +125,7 @@ class CharacterPanel(QWidget):
         return parts[:25]
 
     def get_options(self) -> PipelineOptions:
-        engine = ["serpapi", "brave", "ddg"][self._engine_combo.currentIndex()]
+        engine = ["serpapi", "brave", "test"][self._engine_combo.currentIndex()]
         rows, cols = [(5,5),(4,4),(3,3),(2,2)][self._layout_combo.currentIndex()]
         paper = ["B4", "A4", "Letter", "A3"][self._paper_combo.currentIndex()]
         return PipelineOptions(
