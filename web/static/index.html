@@ -155,7 +155,7 @@
 
     /* ===== IMAGE GRID ===== */
     .image-grid {
-      flex: 1; display: grid; gap: 4px;
+      flex: 1; min-height: 0; display: grid; gap: 4px;
       padding: 10px; overflow-y: auto; background: #0d1117;
       align-content: start;
     }
@@ -163,13 +163,12 @@
     /* ===== CARD ===== */
     .card-wrapper {
       position: relative; overflow: hidden;
-      border-radius: 5px; aspect-ratio: 7/10;
-      background: #161b22; cursor: grab;
-      transition: transform 0.1s;
+      border-radius: 5px; background: #161b22; cursor: grab;
     }
     .card-wrapper:active { cursor: grabbing; }
     .card-wrapper img {
-      width: 100%; height: 100%; object-fit: cover; display: block;
+      width: 100%; display: block;
+      aspect-ratio: 7/10; object-fit: cover;
     }
     .card-overlay {
       position: absolute; inset: 0;
