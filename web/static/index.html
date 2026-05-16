@@ -474,7 +474,10 @@
       link.textContent = "Download .docx";
       downloadArea.appendChild(link);
 
-      showGrid(e.data, 25);
+      fetch(`/images/${e.data}`)
+        .then(r => r.json())
+        .then(d => showGrid(e.data, d.count))
+        .catch(() => showGrid(e.data, 25));
     });
 
     evtSource.addEventListener("error", (e) => {
