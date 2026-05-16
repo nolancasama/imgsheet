@@ -241,7 +241,19 @@
     <div class="options-section">
       <label class="section-label">Options</label>
 
+      <select id="opt-engine">
+        <option value="serpapi">Google (SerpAPI)</option>
+        <option value="brave">Brave</option>
+        <option value="test">Test (no search)</option>
+      </select>
+
       <div class="two-col">
+        <select id="opt-paper">
+          <option value="B4">B4 (257×364mm)</option>
+          <option value="A4">A4 (210×297mm)</option>
+          <option value="Letter">Letter (216×279mm)</option>
+          <option value="A3">A3 (297×420mm)</option>
+        </select>
         <select id="opt-layout">
           <option value="5x5">5×5 (25 cards)</option>
           <option value="5x6">5×6 (30 cards)</option>
@@ -249,28 +261,8 @@
           <option value="3x3">3×3 (9 cards)</option>
           <option value="2x2">2×2 (4 cards)</option>
         </select>
-        <select id="opt-paper">
-          <option value="B4">B4 (257×364mm)</option>
-          <option value="A4">A4 (210×297mm)</option>
-          <option value="Letter">Letter (216×279mm)</option>
-          <option value="A3">A3 (297×420mm)</option>
-        </select>
       </div>
 
-      <select id="opt-engine">
-        <option value="serpapi">Google (SerpAPI)</option>
-        <option value="brave">Brave</option>
-        <option value="test">Test (no search)</option>
-      </select>
-
-      <label class="checkbox-row">
-        <input type="checkbox" id="opt-randomize" />
-        <span>Randomize results</span>
-      </label>
-      <label class="checkbox-row">
-        <input type="checkbox" id="opt-claude" />
-        <span>Filter with Claude Vision</span>
-      </label>
       <label class="checkbox-row">
         <input type="checkbox" id="opt-pdf" />
         <span>Export PDF</span>
@@ -350,8 +342,6 @@
   const optLayout      = document.getElementById("opt-layout");
   const optPaper       = document.getElementById("opt-paper");
   const optEngine      = document.getElementById("opt-engine");
-  const optRandomize   = document.getElementById("opt-randomize");
-  const optClaude      = document.getElementById("opt-claude");
   const optPdf         = document.getElementById("opt-pdf");
   const optEmail       = document.getElementById("opt-email");
   const cropModal      = document.getElementById("crop-modal");
@@ -694,9 +684,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompts: names,
-          use_claude: optClaude.checked,
+          use_claude: false,
           export_pdf: optPdf.checked,
-          randomize: optRandomize.checked,
+          randomize: false,
           search_engine: optEngine.value,
           send_email_to: optEmail.value.trim(),
           rows,
