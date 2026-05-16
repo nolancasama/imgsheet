@@ -125,6 +125,7 @@ class PipelineOptions:
     rows: int = 5
     cols: int = 5
     paper_size: str = "B4"
+    double_sided: bool = False
 
 
 @dataclass
@@ -139,6 +140,7 @@ class PipelineResult:
     output_docx: str
     output_pdf: Optional[str]
     characters: list  # list of CharacterResult
+    back_image_paths: list = field(default_factory=list)
 
 
 # =========================
@@ -544,7 +546,40 @@ _B4_USABLE_W = PAPER_SIZES["B4"][0] - PAGE_MARGIN_MM * 2
 FIXED_CELL_W_MM = (_B4_USABLE_W / 5) - PADDING_MM  # 45.4mm
 
 
-def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4"):
+def _mirror_rows(paths, rows, cols):
+    """Return paths with each row's columns reversed (for back-side of double-sided sheet)."""
+    result = []
+    for r in range(rows):
+        row = paths[r * cols:(r + 1) * cols]
+        result.extend(reversed(row))
+    return result
+
+
+def _build_table(doc, image_paths, rows, cols):
+    table = doc.add_table(rows=rows, cols=cols)
+    tblBorders = OxmlElement('w:tblBorders')
+    for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+        border = OxmlElement(f'w:{side}')
+        border.set(qn('w:val'), 'single')
+        border.set(qn('w:sz'), '4')
+        border.set(qn('w:space'), '0')
+        border.set(qn('w:color'), 'CCCCCC')
+        tblBorders.append(border)
+    table._tbl.tblPr.append(tblBorders)
+    i = 0
+    for r in range(rows):
+        for c in range(cols):
+            if i >= len(image_paths):
+                break
+            cell = table.cell(r, c)
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            para = cell.paragraphs[0]
+            para.alignment = 1
+            para.add_run().add_picture(image_paths[i], width=Mm(FIXED_CELL_W_MM))
+            i += 1
+
+
+def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4", back_paths=None):
     w_mm, h_mm = PAPER_SIZES.get(paper_size, PAPER_SIZES["B4"])
     doc = Document()
     section = doc.sections[0]
@@ -559,29 +594,16 @@ def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4"):
     section.left_margin = Mm(side_margin)
     section.right_margin = Mm(side_margin)
 
-    table = doc.add_table(rows=rows, cols=cols)
+    _build_table(doc, image_paths, rows, cols)
 
-    tblBorders = OxmlElement('w:tblBorders')
-    for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
-        border = OxmlElement(f'w:{side}')
-        border.set(qn('w:val'), 'single')
-        border.set(qn('w:sz'), '4')
-        border.set(qn('w:space'), '0')
-        border.set(qn('w:color'), 'CCCCCC')
-        tblBorders.append(border)
-    table._tbl.tblPr.append(tblBorders)
-
-    i = 0
-    for r in range(rows):
-        for c in range(cols):
-            if i >= len(image_paths):
-                break
-            cell = table.cell(r, c)
-            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
-            para = cell.paragraphs[0]
-            para.alignment = 1
-            para.add_run().add_picture(image_paths[i], width=Mm(FIXED_CELL_W_MM))
-            i += 1
+    if back_paths:
+        # Page break then back sheet (mirrored columns) in the same document
+        para = doc.add_paragraph()
+        run = para.add_run()
+        br = OxmlElement('w:br')
+        br.set(qn('w:type'), 'page')
+        run._r.append(br)
+        _build_table(doc, back_paths, rows, cols)
 
     doc.save(output_name)
 
@@ -646,6 +668,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
     prompt_counts = [base + 1 if i < extra else base for i in range(len(prompts))]
 
     all_images = []
+    all_back_images = []
     character_results = []
     seen_lock = threading.Lock()
 
@@ -687,6 +710,11 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                     char_candidate_paths.append(path)
                 char_paths = char_candidate_paths[:needed]
                 all_images.extend(char_paths)
+                if options.double_sided:
+                    char_back = char_candidate_paths[needed:needed * 2]
+                    if len(char_back) < needed:
+                        char_back = [char_paths[j % len(char_paths)] for j in range(needed)]
+                    all_back_images.extend(char_back)
                 character_results.append(CharacterResult(
                     prompt=prompt, image_paths=char_paths, candidate_paths=char_candidate_paths
                 ))
@@ -709,7 +737,8 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                         path = os.path.join(TEMP_DIR, f"c{i}_{len(char_candidate_paths)}.jpg")
                         img.save(path, "JPEG", quality=90)
                         char_candidate_paths.append(path)
-                    if len(char_candidate_paths) >= MAX_CLAUDE_CALLS_PER_PROMPT:
+                    _cand_limit = max(MAX_CLAUDE_CALLS_PER_PROMPT, needed * 2) if options.double_sided else MAX_CLAUDE_CALLS_PER_PROMPT
+                    if len(char_candidate_paths) >= _cand_limit:
                         for f in futures:
                             f.cancel()
                         break
@@ -737,6 +766,20 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                 all_images.extend(char_paths)
                 for j in range(len(char_paths)):
                     on_progress(f"{prompt}: image {j + 1}/{len(char_paths)}")
+
+            if options.double_sided:
+                used_set = set(char_paths)
+                available_back = [p for p in char_candidate_paths if p not in used_set]
+                if len(available_back) >= needed:
+                    char_back = available_back[:needed]
+                elif char_paths:
+                    char_back = available_back + [
+                        char_paths[j % len(char_paths)]
+                        for j in range(needed - len(available_back))
+                    ]
+                else:
+                    char_back = available_back[:]
+                all_back_images.extend(char_back)
 
             character_results.append(CharacterResult(
                 prompt=prompt, image_paths=char_paths, candidate_paths=char_candidate_paths
@@ -778,14 +821,30 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
     except InterruptedError:
         raise PipelineCancelled(all_images, character_results)
 
+    # Pad back images to match front count (shortfall slots get cycled back images)
+    if options.double_sided and all_images:
+        if not all_back_images:
+            all_back_images = list(all_images)
+        while len(all_back_images) < len(all_images):
+            all_back_images.append(all_back_images[len(all_back_images) % len(all_back_images)])
+        all_back_images = all_back_images[:len(all_images)]
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if output_dir is None:
         output_dir = os.path.join(os.path.expanduser("~"), "Downloads")
     os.makedirs(output_dir, exist_ok=True)
     output_docx = os.path.join(output_dir, f"output_{timestamp}.docx")
 
+    back_paths_for_doc = None
+    if options.double_sided and all_back_images:
+        on_progress("Building back sheet...")
+        back_paths_for_doc = _mirror_rows(
+            all_back_images[:options.rows * options.cols], options.rows, options.cols
+        )
+
     on_progress("Building document...")
-    create_doc(all_images, output_docx, options.rows, options.cols, options.paper_size)
+    create_doc(all_images, output_docx, options.rows, options.cols, options.paper_size,
+               back_paths=back_paths_for_doc)
 
     output_pdf = None
     if options.export_pdf:
@@ -818,4 +877,5 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
         output_docx=output_docx,
         output_pdf=output_pdf,
         characters=character_results,
+        back_image_paths=back_paths_for_doc or [],
     )

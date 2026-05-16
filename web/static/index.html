@@ -11,13 +11,14 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0f1117;
       color: #e1e4e8;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      align-items: center;
     }
 
     header {
+      width: 100%;
       padding: 14px 24px;
       background: #161b22;
       border-bottom: 1px solid #30363d;
@@ -26,26 +27,28 @@
       gap: 10px;
       flex-shrink: 0;
     }
-
     header h1 { font-size: 1.1rem; font-weight: 600; color: #f0f6fc; }
     header .badge {
       font-size: 0.7rem; background: #1f6feb; color: #fff;
       padding: 2px 8px; border-radius: 20px; font-weight: 500;
     }
 
-    .layout { display: flex; flex: 1; overflow: hidden; }
+    /* ===== CENTER PANEL ===== */
+    .panel-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 28px 20px;
+    }
 
-    /* ===== LEFT PANEL ===== */
-    .left-panel {
-      width: 300px;
-      flex-shrink: 0;
-      background: #161b22;
-      border-right: 1px solid #30363d;
+    .center-panel {
+      width: 100%;
+      max-width: 400px;
       display: flex;
       flex-direction: column;
-      padding: 16px 14px;
       gap: 12px;
-      overflow-y: auto;
     }
 
     label.section-label {
@@ -59,7 +62,7 @@
     }
 
     textarea {
-      width: 100%; height: 140px;
+      width: 100%; height: 130px;
       background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
       color: #e1e4e8; font-size: 0.92rem; padding: 9px 11px;
       resize: vertical; font-family: inherit; line-height: 1.5;
@@ -102,56 +105,98 @@
     #generate-btn:hover:not(:disabled) { background: #388bfd; }
     #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    #view-sheet-btn {
+      display: none;
+      width: 100%; padding: 9px;
+      background: transparent; color: #1f6feb;
+      border: 1px solid #1f6feb; border-radius: 8px;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    #view-sheet-btn:hover { background: rgba(31,111,235,0.1); }
+
     .status-area {
       background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
-      padding: 9px 11px; min-height: 70px; max-height: 180px;
+      padding: 9px 11px; min-height: 60px; max-height: 140px;
       overflow-y: auto;
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 0.76rem; line-height: 1.6; color: #8b949e;
     }
-    .status-area .msg { color: #c9d1d9; }
+    .status-area .msg       { color: #c9d1d9; }
     .status-area .msg-error { color: #f85149; }
     .status-area .msg-success { color: #3fb950; }
 
+    /* ===== SHEET MODAL ===== */
+    .sheet-modal {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.82);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+    }
+    .sheet-modal.open { display: flex; }
+
+    .sheet-modal-inner {
+      width: 92vw; height: 88vh;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sheet-modal.open .sheet-modal-inner {
+      animation: modal-in 0.16s ease;
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(0.97); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-topbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      flex-shrink: 0;
+    }
+    #modal-title { font-size: 0.85rem; color: #8b949e; white-space: nowrap; }
+
+    #modified-badge {
+      font-size: 0.75rem; color: #f8c537; font-weight: 500;
+      display: none; white-space: nowrap;
+    }
+
+    .sheet-toggle { display: none; gap: 3px; }
+    .sheet-toggle button {
+      font-size: 0.78rem; font-weight: 600;
+      border: none; border-radius: 4px; cursor: pointer;
+      padding: 3px 10px; transition: background 0.12s, color 0.12s;
+    }
+    .sheet-toggle button.active { background: #1f6feb; color: #fff; }
+    .sheet-toggle button:not(.active) { background: #30363d; color: #8b949e; }
+
+    .topbar-spacer { flex: 1; }
+
+    #download-area { display: flex; gap: 6px; align-items: center; }
+
     .download-link {
-      display: block; margin-top: 8px; padding: 8px 16px;
-      background: #238636; color: #fff; border-radius: 8px;
-      text-decoration: none; font-size: 0.88rem; font-weight: 600;
-      transition: background 0.15s; text-align: center;
+      padding: 5px 14px;
+      background: #238636; color: #fff; border-radius: 6px;
+      text-decoration: none; font-size: 0.83rem; font-weight: 600;
+      transition: background 0.15s; white-space: nowrap;
     }
     .download-link:hover { background: #2ea043; }
 
-    /* ===== RIGHT PANEL ===== */
-    .right-panel {
-      flex: 1; display: flex; flex-direction: column;
-      background: #0d1117; overflow: hidden;
+    #close-modal-btn {
+      background: none; border: none; color: #8b949e;
+      font-size: 1.1rem; cursor: pointer; padding: 2px 6px;
+      border-radius: 4px; line-height: 1; margin-left: 4px;
     }
-
-    .preview-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 9px 16px;
-      background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0;
-    }
-    .preview-header .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #30363d; transition: background 0.2s;
-    }
-    .preview-header .dot.active { background: #1f6feb; }
-    #preview-label { font-size: 0.83rem; color: #8b949e; }
-    #modified-badge {
-      display: none; margin-left: auto;
-      font-size: 0.75rem; color: #f8c537; font-weight: 500;
-    }
-
-    .preview-placeholder {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 11px; color: #484f58; font-size: 0.88rem;
-      text-align: center; padding: 40px;
-    }
-    .preview-placeholder .big { font-size: 2.5rem; }
-    .preview-placeholder a { color: #1f6feb; text-decoration: none; }
-    .preview-placeholder a:hover { text-decoration: underline; }
+    #close-modal-btn:hover { background: #30363d; color: #e1e4e8; }
 
     /* ===== IMAGE GRID ===== */
     .image-grid {
@@ -221,10 +266,8 @@
   <span class="badge">Web</span>
 </header>
 
-<div class="layout">
-
-  <!-- LEFT PANEL -->
-  <div class="left-panel">
+<div class="panel-wrapper">
+  <div class="center-panel">
 
     <div>
       <label class="section-label">History</label>
@@ -268,40 +311,43 @@
         <span>Export PDF</span>
       </label>
 
+      <label class="checkbox-row">
+        <input type="checkbox" id="opt-double" />
+        <span>Double-sided (generates back sheet with mirrored columns)</span>
+      </label>
+
       <input type="text" id="opt-email" placeholder="Send to email (optional)" />
     </div>
 
     <button id="generate-btn">Generate Sheet</button>
+    <button id="view-sheet-btn">View sheet</button>
 
     <div>
       <label class="section-label">Status</label>
       <div class="status-area" id="status-area">
         <span style="color:#484f58">Ready. Enter characters and click Generate.</span>
       </div>
-      <div id="download-area"></div>
     </div>
 
   </div>
+</div>
 
-  <!-- RIGHT PANEL -->
-  <div class="right-panel">
-    <div class="preview-header">
-      <div class="dot" id="preview-dot"></div>
-      <span id="preview-label">How it works</span>
-      <span id="modified-badge">● Unsaved changes</span>
-    </div>
-    <div class="preview-placeholder" id="preview-placeholder">
-      <div class="big">🖼️</div>
-      <div>Enter character names on the left, one per line or comma separated.</div>
-      <div>Click <strong style="color:#c9d1d9">Generate Sheet</strong> to search and assemble a card grid.</div>
-      <div>Hover cards to <strong style="color:#c9d1d9">swap</strong>, <strong style="color:#c9d1d9">delete</strong>, <strong style="color:#c9d1d9">upload</strong>, or <strong style="color:#c9d1d9">crop</strong>. Drag to rearrange.</div>
-      <div style="margin-top:6px; font-size:0.76rem;">
-        <a href="https://duckduckgo.com/?ia=images&iax=images" target="_blank" rel="noopener">Browse images on DuckDuckGo</a>
+<!-- SHEET MODAL -->
+<div class="sheet-modal" id="sheet-modal">
+  <div class="sheet-modal-inner">
+    <div class="modal-topbar">
+      <span id="modal-title">Preview</span>
+      <span id="modified-badge">&#9679; Unsaved changes</span>
+      <div class="sheet-toggle" id="sheet-toggle">
+        <button id="btn-front" class="active" onclick="switchSheet('front')">Front</button>
+        <button id="btn-back"                onclick="switchSheet('back')">Back</button>
       </div>
+      <div class="topbar-spacer"></div>
+      <div id="download-area"></div>
+      <button id="close-modal-btn" title="Close (Esc)">&#x2715;</button>
     </div>
-    <div class="image-grid" id="image-grid" style="display:none"></div>
+    <div class="image-grid" id="image-grid"></div>
   </div>
-
 </div>
 
 <!-- CROP MODAL -->
@@ -319,34 +365,40 @@
 
 <script>
   // ===== STATE =====
-  let activeJobId = null;
-  let dragSrcIdx = null;
-  let currentCols = 5;
-  let cropCardIdx = null;
-  let cropSrc = null;
-  let cropRect = { x: 0, y: 0, w: 0, h: 0 };
-  let cropDragging = false;
-  let cropStart = { x: 0, y: 0 };
+  let activeJobId   = null;
+  let dragSrcIdx    = null;
+  let currentCols   = 5;
+  let currentSheet  = 'front';
+  let backCount     = 0;
+  let cropCardIdx   = null;
+  let cropSrc       = null;
+  let cropRect      = { x: 0, y: 0, w: 0, h: 0 };
+  let cropDragging  = false;
+  let cropStart     = { x: 0, y: 0 };
 
   // ===== ELEMENTS =====
-  const promptsEl      = document.getElementById("prompts");
-  const generateBtn    = document.getElementById("generate-btn");
-  const statusArea     = document.getElementById("status-area");
-  const downloadArea   = document.getElementById("download-area");
-  const previewLabel   = document.getElementById("preview-label");
-  const previewDot     = document.getElementById("preview-dot");
-  const modifiedBadge  = document.getElementById("modified-badge");
-  const placeholder    = document.getElementById("preview-placeholder");
-  const imageGrid      = document.getElementById("image-grid");
-  const historySelect  = document.getElementById("history-select");
-  const optLayout      = document.getElementById("opt-layout");
-  const optPaper       = document.getElementById("opt-paper");
-  const optEngine      = document.getElementById("opt-engine");
-  const optPdf         = document.getElementById("opt-pdf");
-  const optEmail       = document.getElementById("opt-email");
-  const cropModal      = document.getElementById("crop-modal");
-  const cropCanvas     = document.getElementById("crop-canvas");
-  const cropCtx        = cropCanvas.getContext("2d");
+  const promptsEl     = document.getElementById("prompts");
+  const generateBtn   = document.getElementById("generate-btn");
+  const viewSheetBtn  = document.getElementById("view-sheet-btn");
+  const statusArea    = document.getElementById("status-area");
+  const downloadArea  = document.getElementById("download-area");
+  const modifiedBadge = document.getElementById("modified-badge");
+  const historySelect = document.getElementById("history-select");
+  const optLayout     = document.getElementById("opt-layout");
+  const optPaper      = document.getElementById("opt-paper");
+  const optEngine     = document.getElementById("opt-engine");
+  const optPdf        = document.getElementById("opt-pdf");
+  const optDouble     = document.getElementById("opt-double");
+  const optEmail      = document.getElementById("opt-email");
+  const sheetModal    = document.getElementById("sheet-modal");
+  const sheetToggle   = document.getElementById("sheet-toggle");
+  const btnFront      = document.getElementById("btn-front");
+  const btnBack       = document.getElementById("btn-back");
+  const modalTitle    = document.getElementById("modal-title");
+  const imageGrid     = document.getElementById("image-grid");
+  const cropModal     = document.getElementById("crop-modal");
+  const cropCanvas    = document.getElementById("crop-canvas");
+  const cropCtx       = cropCanvas.getContext("2d");
 
   // ===== UTILITIES =====
   function parseNames(text) {
@@ -391,23 +443,43 @@
 
   renderHistory();
 
-  // Auto-select optimal layout when paper size changes
   const PAPER_LAYOUTS = { B4: '5x5', A3: '5x6', A4: '4x4', Letter: '4x4' };
   optPaper.addEventListener('change', () => {
     const layout = PAPER_LAYOUTS[optPaper.value];
     if (layout) optLayout.value = layout;
   });
 
+  // ===== MODAL =====
+  function openModal() {
+    sheetModal.classList.add('open');
+  }
+
+  function closeModal() {
+    sheetModal.classList.remove('open');
+  }
+
+  document.getElementById('close-modal-btn').addEventListener('click', closeModal);
+
+  sheetModal.addEventListener('click', (e) => {
+    if (e.target === sheetModal) closeModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sheetModal.classList.contains('open')) closeModal();
+  });
+
+  viewSheetBtn.addEventListener('click', openModal);
+
   // ===== STATUS =====
   function clearStatus() {
     statusArea.innerHTML = '';
     downloadArea.innerHTML = '';
     modifiedBadge.style.display = 'none';
-    imageGrid.style.display = 'none';
+    sheetToggle.style.display = 'none';
     imageGrid.innerHTML = '';
-    placeholder.style.display = 'flex';
-    previewLabel.textContent = 'How it works';
-    previewDot.classList.remove('active');
+    currentSheet = 'front';
+    backCount = 0;
+    viewSheetBtn.style.display = 'none';
   }
 
   function appendStatus(text, cls = 'msg') {
@@ -423,94 +495,111 @@
   }
 
   // ===== GRID =====
-  function showGrid(jobId, count, cols) {
+  function showGrid(jobId, count, cols, isBack = false) {
     imageGrid.innerHTML = '';
     activeJobId = jobId;
     currentCols = cols || currentCols;
     imageGrid.style.gridTemplateColumns = `repeat(${currentCols}, 1fr)`;
 
+    const urlPrefix = isBack ? 'back_image' : 'image';
     for (let i = 0; i < count; i++) {
-      imageGrid.appendChild(makeCard(jobId, i));
+      imageGrid.appendChild(makeCard(jobId, i, isBack, urlPrefix));
     }
 
-    placeholder.style.display = 'none';
-    imageGrid.style.display = 'grid';
-    previewLabel.textContent = `Preview — ${count} cards`;
-    previewDot.classList.add('active');
+    modalTitle.textContent = isBack
+      ? `Back sheet — ${count} cards (columns mirrored)`
+      : `${count} cards`;
+
+    openModal();
   }
 
-  function makeCard(jobId, idx) {
+  function switchSheet(side) {
+    if (side === currentSheet || !activeJobId) return;
+    currentSheet = side;
+    btnFront.classList.toggle('active', side === 'front');
+    btnBack.classList.toggle('active', side === 'back');
+    if (side === 'front') {
+      showGrid(activeJobId, imageGrid.dataset.frontCount, currentCols, false);
+    } else {
+      showGrid(activeJobId, backCount, currentCols, true);
+    }
+  }
+
+  // ===== CARD =====
+  function makeCard(jobId, idx, isBack = false, urlPrefix = 'image') {
     const wrapper = document.createElement('div');
     wrapper.className = 'card-wrapper';
     wrapper.dataset.idx = idx;
-    wrapper.draggable = true;
 
     const img = document.createElement('img');
-    img.src = `/image/${jobId}/${idx}?t=${Date.now()}`;
+    img.src = `/${urlPrefix}/${jobId}/${idx}?t=${Date.now()}`;
     img.alt = `Card ${idx + 1}`;
+    wrapper.appendChild(img);
 
-    const overlay = document.createElement('div');
-    overlay.className = 'card-overlay';
+    if (!isBack) {
+      wrapper.draggable = true;
 
-    const swapBtn = btn('⟳', 'Swap image');
-    const delBtn  = btn('✕', 'Remove card', 'del');
-    const cropBtn = btn('✂', 'Crop / reframe');
+      const overlay = document.createElement('div');
+      overlay.className = 'card-overlay';
 
-    const uploadLabel = document.createElement('label');
-    uploadLabel.className = 'card-btn';
-    uploadLabel.title = 'Upload custom image';
-    uploadLabel.textContent = '↑';
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.style.display = 'none';
-    uploadLabel.appendChild(fileInput);
+      const swapBtn = btn('&#x27F3;', 'Swap image');
+      const delBtn  = btn('&#x2715;', 'Remove card', 'del');
+      const cropBtn = btn('&#x2702;', 'Crop / reframe');
 
-    overlay.append(swapBtn, delBtn, cropBtn, uploadLabel);
-    wrapper.append(img, overlay);
+      const uploadLabel = document.createElement('label');
+      uploadLabel.className = 'card-btn';
+      uploadLabel.title = 'Upload custom image';
+      uploadLabel.innerHTML = '&#x2191;';
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      uploadLabel.appendChild(fileInput);
 
-    // Events
-    swapBtn.addEventListener('click', (e) => { e.stopPropagation(); swapCard(idx); });
-    delBtn.addEventListener('click',  (e) => { e.stopPropagation(); deleteCard(idx); });
-    cropBtn.addEventListener('click', (e) => { e.stopPropagation(); openCrop(idx, img.src); });
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) uploadCard(idx, e.target.files[0]);
-    });
+      overlay.append(swapBtn, delBtn, cropBtn, uploadLabel);
+      wrapper.appendChild(overlay);
 
-    // Drag to rearrange
-    wrapper.addEventListener('dragstart', (e) => {
-      dragSrcIdx = parseInt(wrapper.dataset.idx);
-      wrapper.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    wrapper.addEventListener('dragend', () => wrapper.classList.remove('dragging'));
-    wrapper.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      if (e.dataTransfer.files.length === 0) {
-        e.dataTransfer.dropEffect = 'move';
-        wrapper.classList.add('drag-over');
-      }
-    });
-    wrapper.addEventListener('dragleave', () => wrapper.classList.remove('drag-over'));
-    wrapper.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      wrapper.classList.remove('drag-over');
-      const toIdx = parseInt(wrapper.dataset.idx);
-      if (e.dataTransfer.files.length > 0) {
-        await uploadCard(toIdx, e.dataTransfer.files[0]);
-      } else if (dragSrcIdx !== null && dragSrcIdx !== toIdx) {
-        await reorderCard(dragSrcIdx, toIdx);
-      }
-      dragSrcIdx = null;
-    });
+      swapBtn.addEventListener('click', (e) => { e.stopPropagation(); swapCard(idx); });
+      delBtn.addEventListener('click',  (e) => { e.stopPropagation(); deleteCard(idx); });
+      cropBtn.addEventListener('click', (e) => { e.stopPropagation(); openCrop(idx, img.src); });
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) uploadCard(idx, e.target.files[0]);
+      });
+
+      wrapper.addEventListener('dragstart', (e) => {
+        dragSrcIdx = parseInt(wrapper.dataset.idx);
+        wrapper.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      wrapper.addEventListener('dragend', () => wrapper.classList.remove('dragging'));
+      wrapper.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length === 0) {
+          e.dataTransfer.dropEffect = 'move';
+          wrapper.classList.add('drag-over');
+        }
+      });
+      wrapper.addEventListener('dragleave', () => wrapper.classList.remove('drag-over'));
+      wrapper.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        wrapper.classList.remove('drag-over');
+        const toIdx = parseInt(wrapper.dataset.idx);
+        if (e.dataTransfer.files.length > 0) {
+          await uploadCard(toIdx, e.dataTransfer.files[0]);
+        } else if (dragSrcIdx !== null && dragSrcIdx !== toIdx) {
+          await reorderCard(dragSrcIdx, toIdx);
+        }
+        dragSrcIdx = null;
+      });
+    }
 
     return wrapper;
   }
 
-  function btn(text, title, extraClass) {
+  function btn(html, title, extraClass) {
     const b = document.createElement('button');
     b.className = 'card-btn' + (extraClass ? ' ' + extraClass : '');
-    b.textContent = text;
+    b.innerHTML = html;
     b.title = title;
     return b;
   }
@@ -518,16 +607,14 @@
   function refreshCardImg(idx) {
     const wrapper = imageGrid.children[idx];
     if (!wrapper) return;
-    wrapper.querySelector('img').src = `/image/${activeJobId}/${idx}?t=${Date.now()}`;
+    const prefix = currentSheet === 'back' ? 'back_image' : 'image';
+    wrapper.querySelector('img').src = `/${prefix}/${activeJobId}/${idx}?t=${Date.now()}`;
   }
 
   // ===== CARD OPERATIONS =====
   async function swapCard(idx) {
     const res = await fetch(`/swap/${activeJobId}/${idx}`, { method: 'POST' });
-    if (!res.ok) {
-      appendStatus('No more candidates for this card.', 'msg-error');
-      return;
-    }
+    if (!res.ok) { appendStatus('No more candidates for this card.', 'msg-error'); return; }
     refreshCardImg(idx);
     markModified();
   }
@@ -538,7 +625,7 @@
     const data = await res.json();
     imageGrid.children[idx].remove();
     [...imageGrid.children].forEach((el, i) => el.dataset.idx = i);
-    previewLabel.textContent = `Preview — ${data.count} cards`;
+    modalTitle.textContent = `${data.count} cards`;
     markModified();
   }
 
@@ -564,7 +651,6 @@
     });
     if (!res.ok) return;
 
-    // Move DOM element
     const movedEl = imageGrid.children[fromIdx];
     const elements = [...imageGrid.children];
     elements.splice(fromIdx, 1);
@@ -578,7 +664,7 @@
 
   function openCrop(idx, src) {
     cropCardIdx = idx;
-    cropSrc = src.split('?')[0]; // strip cache buster
+    cropSrc = src.split('?')[0];
     cropImg = new window.Image();
     cropImg.crossOrigin = 'anonymous';
     cropImg.onload = () => {
@@ -636,11 +722,7 @@
   });
 
   document.getElementById('crop-confirm').addEventListener('click', async () => {
-    if (cropRect.w < 10 || cropRect.h < 10) {
-      cropModal.classList.remove('open');
-      return;
-    }
-    // Render cropped region to an offscreen canvas
+    if (cropRect.w < 10 || cropRect.h < 10) { cropModal.classList.remove('open'); return; }
     const scaleX = cropImg.width  / cropCanvas.width;
     const scaleY = cropImg.height / cropCanvas.height;
     const off = document.createElement('canvas');
@@ -692,6 +774,7 @@
           rows,
           cols,
           paper_size: optPaper.value,
+          double_sided: optDouble.checked,
         }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -705,12 +788,11 @@
     }
 
     const evtSource = new EventSource(`/progress/${jobId}`);
-
     evtSource.onmessage = (e) => appendStatus(e.data);
 
     evtSource.addEventListener('done', async (e) => {
       evtSource.close();
-      appendStatus('Done! Your sheet is ready.', 'msg-success');
+      appendStatus('Done!', 'msg-success');
       generateBtn.disabled = false;
       generateBtn.textContent = 'Generate Sheet';
 
@@ -721,12 +803,25 @@
       downloadArea.appendChild(link);
 
       saveToHistory(names);
+      viewSheetBtn.style.display = 'block';
 
       try {
         const r = await fetch(`/images/${e.data}`);
         const d = await r.json();
+        backCount = d.back_count || 0;
+        imageGrid.dataset.frontCount = d.count;
+
+        if (backCount > 0) {
+          sheetToggle.style.display = 'flex';
+          btnFront.classList.add('active');
+          btnBack.classList.remove('active');
+          currentSheet = 'front';
+        }
+
         showGrid(e.data, d.count, cols);
-      } catch { showGrid(e.data, rows * cols, cols); }
+      } catch {
+        showGrid(e.data, rows * cols, cols);
+      }
     });
 
     evtSource.addEventListener('error', (e) => {

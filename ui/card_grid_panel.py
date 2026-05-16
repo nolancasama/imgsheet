@@ -10,12 +10,23 @@ from PySide6.QtGui import QPixmap
 CARD_W = 120
 CARD_H = 171  # 7:10 ratio
 
+_BTN_STYLE = (
+    "QPushButton { font-size: 11px; color: #ccc; background: #444; border: none; border-radius: 3px; }"
+    "QPushButton:hover { background: #666; }"
+)
+_TOGGLE_STYLE = (
+    "QPushButton { font-size: 11px; font-weight: bold; border-radius: 3px; padding: 2px 10px; border: none; }"
+    "QPushButton:checked { background: #1976D2; color: white; }"
+    "QPushButton:!checked { background: #444; color: #aaa; }"
+)
+
 
 class CardItem(QFrame):
-    def __init__(self, path, char_idx, parent=None):
+    def __init__(self, path, char_idx, readonly=False, parent=None):
         super().__init__(parent)
         self.path = path
         self.char_idx = char_idx
+        self._readonly = readonly
         self.setFrameShape(QFrame.StyledPanel)
         self.setStyleSheet("QFrame { background: #2a2a3e; border-radius: 4px; }")
         self._setup()
@@ -32,22 +43,23 @@ class CardItem(QFrame):
         self._load(self.path)
         layout.addWidget(self._img_label)
 
-        btn_row = QHBoxLayout()
-        btn_row.setContentsMargins(0, 0, 0, 0)
-        btn_row.setSpacing(2)
-        for text, tip, slot in [
-            ("⟳", "Swap with next candidate", self._on_swap),
-            ("✕", "Remove card",              self._on_delete),
-            ("↑", "Upload custom image",      self._on_upload),
-        ]:
-            b = QPushButton(text)
-            b.setToolTip(tip)
-            b.setFixedHeight(20)
-            b.setStyleSheet("QPushButton { font-size: 11px; color: #ccc; background: #444; border: none; border-radius: 3px; }"
-                            "QPushButton:hover { background: #666; }")
-            b.clicked.connect(slot)
-            btn_row.addWidget(b)
-        layout.addLayout(btn_row)
+        if not self._readonly:
+            btn_row = QHBoxLayout()
+            btn_row.setContentsMargins(0, 0, 0, 0)
+            btn_row.setSpacing(2)
+            for text, tip, slot in [
+                ("⟳", "Swap with next candidate", self._on_swap),
+                ("✕", "Remove card",              self._on_delete),
+                ("↑", "Upload custom image",      self._on_upload),
+            ]:
+                b = QPushButton(text)
+                b.setToolTip(tip)
+                b.setFixedHeight(20)
+                b.setStyleSheet(_BTN_STYLE)
+                b.clicked.connect(slot)
+                btn_row.addWidget(b)
+            layout.addLayout(btn_row)
+
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def _load(self, path):
@@ -60,7 +72,6 @@ class CardItem(QFrame):
     def update_path(self, path):
         self._load(path)
 
-    # --- slots wired by CardGridPanel via lambda ---
     def _on_swap(self):
         grid = self._find_grid()
         if grid:
@@ -92,6 +103,9 @@ class CardGridPanel(QWidget):
         self._result = None
         self._pools = {}
         self._cards = []
+        self._back_paths = []      # mirrored back-sheet paths
+        self._back_mode = False
+        self._saved_front_data = []  # snapshot taken when entering back mode
         self._setup_ui()
 
     def _setup_ui(self):
@@ -105,10 +119,36 @@ class CardGridPanel(QWidget):
         top.setStyleSheet("background: #1e1e2e; border-bottom: 1px solid #333;")
         tl = QHBoxLayout(top)
         tl.setContentsMargins(10, 4, 10, 4)
+
         self._info = QLabel("No sheet generated yet")
         self._info.setStyleSheet("color: #ccc; font-size: 12px;")
         tl.addWidget(self._info)
         tl.addStretch()
+
+        # Front / Back toggle (hidden until a back sheet exists)
+        self._front_btn = QPushButton("Front")
+        self._front_btn.setCheckable(True)
+        self._front_btn.setChecked(True)
+        self._front_btn.setFixedHeight(24)
+        self._front_btn.setStyleSheet(_TOGGLE_STYLE)
+        self._front_btn.clicked.connect(self._show_front)
+
+        self._back_btn = QPushButton("Back")
+        self._back_btn.setCheckable(True)
+        self._back_btn.setChecked(False)
+        self._back_btn.setFixedHeight(24)
+        self._back_btn.setStyleSheet(_TOGGLE_STYLE)
+        self._back_btn.clicked.connect(self._show_back)
+
+        self._toggle_widget = QWidget()
+        tw_layout = QHBoxLayout(self._toggle_widget)
+        tw_layout.setContentsMargins(0, 0, 8, 0)
+        tw_layout.setSpacing(3)
+        tw_layout.addWidget(self._front_btn)
+        tw_layout.addWidget(self._back_btn)
+        self._toggle_widget.hide()
+        tl.addWidget(self._toggle_widget)
+
         self._save_btn = QPushButton("Save .docx")
         self._save_btn.setEnabled(False)
         self._save_btn.clicked.connect(self._on_save)
@@ -131,6 +171,8 @@ class CardGridPanel(QWidget):
         self._result = result
         self._options = options
         self._pools = {}
+        self._back_mode = False
+        self._back_paths = getattr(result, 'back_image_paths', [])
         card_data = []
 
         for i, cr in enumerate(result.characters):
@@ -143,6 +185,13 @@ class CardGridPanel(QWidget):
         self._info.setText(f"{len(card_data)} cards  —  hover for options")
         self._save_btn.setEnabled(True)
 
+        if self._back_paths:
+            self._front_btn.setChecked(True)
+            self._back_btn.setChecked(False)
+            self._toggle_widget.show()
+        else:
+            self._toggle_widget.hide()
+
     def _rebuild(self, card_data):
         while self._grid.count():
             item = self._grid.takeAt(0)
@@ -151,7 +200,7 @@ class CardGridPanel(QWidget):
         self._cards = []
         cols = self._options.cols if self._options else 5
         for idx, (path, char_idx) in enumerate(card_data):
-            card = CardItem(path, char_idx, parent=self._container)
+            card = CardItem(path, char_idx, readonly=self._back_mode, parent=self._container)
             self._grid.addWidget(card, idx // cols, idx % cols)
             self._cards.append(card)
 
@@ -159,7 +208,29 @@ class CardGridPanel(QWidget):
         cols = self._options.cols if self._options else 5
         for i, card in enumerate(self._cards):
             self._grid.addWidget(card, i // cols, i % cols)
-        self._info.setText(f"{len(self._cards)} cards")
+        count = len(self._cards)
+        self._info.setText(f"{count} cards  —  hover for options" if not self._back_mode
+                           else f"{count} cards  —  back sheet preview")
+
+    # ===== SHEET TOGGLE =====
+    def _show_front(self):
+        if not self._back_mode:
+            return
+        self._back_mode = False
+        self._front_btn.setChecked(True)
+        self._back_btn.setChecked(False)
+        self._rebuild(self._saved_front_data)
+        self._info.setText(f"{len(self._cards)} cards  —  hover for options")
+
+    def _show_back(self):
+        if self._back_mode or not self._back_paths:
+            return
+        self._saved_front_data = [(c.path, c.char_idx) for c in self._cards]
+        self._back_mode = True
+        self._front_btn.setChecked(False)
+        self._back_btn.setChecked(True)
+        self._rebuild([(p, -1) for p in self._back_paths])
+        self._info.setText(f"{len(self._cards)} cards  —  back sheet (columns mirrored)")
 
     # ===== CARD OPERATIONS =====
     def swap_card(self, card):

@@ -45,27 +45,25 @@ class CharacterPanel(QWidget):
         options_layout = QVBoxLayout(options_group)
         options_layout.setSpacing(6)
 
-        self._pdf_check = QCheckBox("Export PDF (requires OpenOffice/LibreOffice)")
-        self._claude_check = QCheckBox("Filter with Claude Vision")
-        self._randomize_check = QCheckBox("Randomize results")
-        options_layout.addWidget(self._pdf_check)
-        options_layout.addWidget(self._claude_check)
-        options_layout.addWidget(self._randomize_check)
-
         self._engine_combo = QComboBox()
         self._engine_combo.addItems(["Google (SerpAPI)", "Brave", "Test (no search)"])
         self._engine_combo.setCurrentIndex(0)
         options_layout.addWidget(self._engine_combo)
 
         layout_row = QHBoxLayout()
-        self._layout_combo = QComboBox()
-        self._layout_combo.addItems(["5×5 (25)", "5×6 (30)", "4×4 (16)", "3×3 (9)", "2×2 (4)"])
         self._paper_combo = QComboBox()
         self._paper_combo.addItems(["B4", "A4", "Letter", "A3"])
         self._paper_combo.currentIndexChanged.connect(self._on_paper_changed)
-        layout_row.addWidget(self._layout_combo)
+        self._layout_combo = QComboBox()
+        self._layout_combo.addItems(["5×5 (25)", "5×6 (30)", "4×4 (16)", "3×3 (9)", "2×2 (4)"])
         layout_row.addWidget(self._paper_combo)
+        layout_row.addWidget(self._layout_combo)
         options_layout.addLayout(layout_row)
+
+        self._double_sided_check = QCheckBox("Double-sided (back sheet, columns mirrored)")
+        self._pdf_check = QCheckBox("Export PDF (requires LibreOffice)")
+        options_layout.addWidget(self._double_sided_check)
+        options_layout.addWidget(self._pdf_check)
 
         self._email_edit = QLineEdit()
         self._email_edit.setPlaceholderText("Send to email (optional)")
@@ -139,21 +137,19 @@ class CharacterPanel(QWidget):
         rows, cols = [(5,5),(5,6),(4,4),(3,3),(2,2)][self._layout_combo.currentIndex()]
         paper = ["B4", "A4", "Letter", "A3"][self._paper_combo.currentIndex()]
         return PipelineOptions(
-            use_claude=self._claude_check.isChecked(),
             export_pdf=self._pdf_check.isChecked(),
-            randomize=self._randomize_check.isChecked(),
             search_engine=engine,
             send_email_to=self._email_edit.text().strip(),
             rows=rows,
             cols=cols,
             paper_size=paper,
+            double_sided=self._double_sided_check.isChecked(),
         )
 
     def set_generating(self, active: bool):
         self._gen_button.setEnabled(not active)
         self._pdf_check.setEnabled(not active)
-        self._claude_check.setEnabled(not active)
-        self._randomize_check.setEnabled(not active)
+        self._double_sided_check.setEnabled(not active)
         self._engine_combo.setEnabled(not active)
         self._layout_combo.setEnabled(not active)
         self._paper_combo.setEnabled(not active)

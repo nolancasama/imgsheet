@@ -59,6 +59,7 @@ def _init_card_state(job_id, result, options):
     jobs[job_id]["cards"] = cards
     jobs[job_id]["pools"] = pools
     jobs[job_id]["options"] = options
+    jobs[job_id]["back_cards"] = result.back_image_paths
 
 
 # =========================
@@ -74,6 +75,7 @@ class GenerateRequest(BaseModel):
     rows: int = 5
     cols: int = 5
     paper_size: str = "B4"
+    double_sided: bool = False
 
 
 class ReorderBody(BaseModel):
@@ -100,6 +102,7 @@ def generate(body: GenerateRequest):
         "options": None,
         "cards": [],
         "pools": {},
+        "back_cards": [],
     }
 
     options = PipelineOptions(
@@ -111,6 +114,7 @@ def generate(body: GenerateRequest):
         rows=body.rows,
         cols=body.cols,
         paper_size=body.paper_size,
+        double_sided=body.double_sided,
     )
 
     def run():
@@ -173,7 +177,7 @@ def list_images(job_id: str):
     job = jobs.get(job_id)
     if not job or not job["result"]:
         raise HTTPException(status_code=404, detail="Job not found")
-    return {"count": len(job["cards"])}
+    return {"count": len(job["cards"]), "back_count": len(job.get("back_cards", []))}
 
 
 @app.get("/image/{job_id}/{idx}")
@@ -184,6 +188,15 @@ def get_image(job_id: str, idx: int):
     if idx < 0 or idx >= len(job["cards"]):
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(job["cards"][idx]["path"], media_type="image/jpeg")
+
+
+@app.get("/back_image/{job_id}/{idx}")
+def get_back_image(job_id: str, idx: int):
+    job = jobs.get(job_id)
+    back = job.get("back_cards", []) if job else []
+    if idx < 0 or idx >= len(back):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(back[idx], media_type="image/jpeg")
 
 
 @app.post("/swap/{job_id}/{card_idx}")
