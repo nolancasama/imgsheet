@@ -734,7 +734,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                 continue
 
             # Phase 1: parallel downloads — save every passing image to disk immediately
-            with ThreadPoolExecutor(max_workers=12) as executor:
+            with ThreadPoolExecutor(max_workers=4) as executor:
                 futures = {executor.submit(process_image, url, (700, 1000), seen, seen_lock): url for url in urls}
                 for future in as_completed(futures):
                     if cancel_event and cancel_event.is_set():
@@ -812,7 +812,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                     start=random.randint(0, 14) if options.randomize else 0,
                     engine=options.search_engine
                 )
-                with ThreadPoolExecutor(max_workers=12) as rex:
+                with ThreadPoolExecutor(max_workers=4) as rex:
                     rfuts = {rex.submit(process_image, url, (700, 1000), seen, seen_lock): url for url in extra_urls}
                     for rf in as_completed(rfuts):
                         if len(all_images) >= total:
