@@ -628,7 +628,7 @@ def send_email(to_addr, file_path):
     part.add_header("Content-Disposition", f'attachment; filename="{os.path.basename(file_path)}"')
     msg.attach(part)
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
         server.login(GMAIL_USER, GMAIL_APP_PASS)
         server.send_message(msg)
 
@@ -653,7 +653,7 @@ def find_soffice():
 # =========================
 def make_sheet_filename(prompts, timestamp, suffix=""):
     joined = "_".join(prompts)
-    safe = re.sub(r'[^\w]', '_', joined)
+    safe = re.sub(r'[^a-zA-Z0-9]', '_', joined)
     safe = re.sub(r'_+', '_', safe).strip('_')
     if len(safe) > 60:
         safe = safe[:60].rstrip('_')

@@ -298,7 +298,6 @@ def download(job_id: str):
         filename = os.path.basename(output_path)
         return FileResponse(
             path=output_path,
-            filename=filename,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
