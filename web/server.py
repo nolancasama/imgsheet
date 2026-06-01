@@ -271,37 +271,41 @@ async def upload_card(job_id: str, card_idx: int, file: UploadFile = File(...)):
 
 @app.get("/download/{job_id}")
 def download(job_id: str):
-    job = jobs.get(job_id)
-    if not job or not job["result"]:
-        raise HTTPException(status_code=404, detail="Job not found or not complete")
-
-    cards = job["cards"]
-    opts = job["options"]
-    paths = [c["path"] for c in cards]
-
-    missing = [p for p in paths if not os.path.exists(p)]
-    if missing:
-        raise HTTPException(status_code=410, detail=f"Image files no longer on disk ({len(missing)} missing). Please regenerate the sheet.")
-
-    output_path = job["result"].output_docx
-
-    back_paths = None
-    if opts.double_sided and job.get("back_cards"):
-        from pipeline import _mirror_rows
-        back_paths = _mirror_rows(job["back_cards"], opts.rows, opts.cols)
-
+    import traceback
     try:
-        create_doc(paths, output_path, opts.rows, opts.cols, opts.paper_size, back_paths=back_paths)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to build document: {e}")
+        job = jobs.get(job_id)
+        if not job or not job["result"]:
+            raise HTTPException(status_code=404, detail="Job not found or not complete")
 
-    filename = os.path.basename(output_path)
-    return FileResponse(
-        path=output_path,
-        filename=filename,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+        cards = job["cards"]
+        opts = job["options"]
+        paths = [c["path"] for c in cards]
+
+        missing = [p for p in paths if not os.path.exists(p)]
+        if missing:
+            raise HTTPException(status_code=410, detail=f"Image files no longer on disk ({len(missing)} missing). Please regenerate.")
+
+        output_path = job["result"].output_docx
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        back_paths = None
+        if opts.double_sided and job.get("back_cards"):
+            from pipeline import _mirror_rows
+            back_paths = _mirror_rows(job["back_cards"], opts.rows, opts.cols)
+
+        create_doc(paths, output_path, opts.rows, opts.cols, opts.paper_size, back_paths=back_paths)
+
+        filename = os.path.basename(output_path)
+        return FileResponse(
+            path=output_path,
+            filename=filename,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=traceback.format_exc())
 
 
 if __name__ == "__main__":
