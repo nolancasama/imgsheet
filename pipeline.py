@@ -36,6 +36,7 @@ except ImportError:
 # =========================
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "")
+SERPER_API_KEY = os.environ.get("SERPER_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_APP_PASS = os.environ.get("GMAIL_APP_PASS", "")
@@ -461,6 +462,30 @@ def _search_serpapi(query, count, start=0):
         return []
 
 
+def _search_serper(query, count, start=0):
+    try:
+        res = requests.post(
+            "https://google.serper.dev/images",
+            headers={"X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json"},
+            json={"q": query, "num": min(count, 100), "start": start},
+            timeout=20
+        )
+        items = []
+        for r in res.json().get("images", []):
+            items.append({
+                "original": r.get("imageUrl"),
+                "original_width": r.get("imageWidth", 0),
+                "original_height": r.get("imageHeight", 0),
+                "title": r.get("title", ""),
+                "source": r.get("source", ""),
+                "link": r.get("link", ""),
+            })
+        return items
+    except Exception as e:
+        print("Serper search error:", e)
+        return []
+
+
 def _search_ddg(query, count, start=0):
     try:
         from ddgs import DDGS
@@ -489,6 +514,8 @@ def search_images(query, count, start=0, engine="serpapi"):
         raw = _search_serpapi(query, count, start)
     elif engine == "brave":
         raw = _search_brave(query, count, start)
+    elif engine == "serper":
+        raw = _search_serper(query, count, start)
     elif engine == "test":
         return []  # test mode skips URL search entirely
     else:

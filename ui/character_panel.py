@@ -46,7 +46,7 @@ class CharacterPanel(QWidget):
         options_layout.setSpacing(6)
 
         self._engine_combo = QComboBox()
-        self._engine_combo.addItems(["Google (SerpAPI)", "Brave", "Test (no search)"])
+        self._engine_combo.addItems(["Google (SerpAPI)", "Google (Serper)", "Brave", "Test (no search)"])
         self._engine_combo.setCurrentIndex(0)
         options_layout.addWidget(self._engine_combo)
 
@@ -133,7 +133,7 @@ class CharacterPanel(QWidget):
                 self._layout_combo.setCurrentIndex(idx)
 
     def get_options(self) -> PipelineOptions:
-        engine = ["serpapi", "brave", "test"][self._engine_combo.currentIndex()]
+        engine = ["serpapi", "serper", "brave", "test"][self._engine_combo.currentIndex()]
         rows, cols = [(5,5),(5,6),(4,4),(3,3),(2,2)][self._layout_combo.currentIndex()]
         paper = ["B4", "B5", "A4", "Letter", "A3"][self._paper_combo.currentIndex()]
         return PipelineOptions(
