@@ -414,6 +414,9 @@ def _search_brave(query, count, start=0):
             },
             timeout=20
         )
+        if res.status_code != 200:
+            print(f"Brave search error: HTTP {res.status_code} — {res.text[:200]}")
+            return []
         items = []
         for r in res.json().get("results", []):
             props = r.get("properties", {})
@@ -470,6 +473,9 @@ def _search_serper(query, count, start=0):
             json={"q": query, "num": min(count, 100), "start": start},
             timeout=20
         )
+        if res.status_code != 200:
+            print(f"Serper search error: HTTP {res.status_code} — {res.text[:200]}")
+            return []
         items = []
         for r in res.json().get("images", []):
             items.append({
