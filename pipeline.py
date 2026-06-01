@@ -833,6 +833,13 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
     except InterruptedError:
         raise PipelineCancelled(all_images, character_results)
 
+    # Guaranteed fallback: cycle existing images to fill any remaining blank slots
+    if all_images and len(all_images) < total:
+        pool = list(all_images)
+        needed = total - len(all_images)
+        all_images += [pool[i % len(pool)] for i in range(needed)]
+        on_progress(f"Padded {needed} blank slot(s) by repeating existing images.")
+
     # Pad back images to match front count (shortfall slots get cycled back images)
     if options.double_sided and all_images:
         if not all_back_images:
