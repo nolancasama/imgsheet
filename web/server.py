@@ -279,9 +279,21 @@ def download(job_id: str):
     opts = job["options"]
     paths = [c["path"] for c in cards]
 
-    # Rebuild doc from current card order and layout
+    missing = [p for p in paths if not os.path.exists(p)]
+    if missing:
+        raise HTTPException(status_code=410, detail=f"Image files no longer on disk ({len(missing)} missing). Please regenerate the sheet.")
+
     output_path = job["result"].output_docx
-    create_doc(paths, output_path, opts.rows, opts.cols, opts.paper_size)
+
+    back_paths = None
+    if opts.double_sided and job.get("back_cards"):
+        from pipeline import _mirror_rows
+        back_paths = _mirror_rows(job["back_cards"], opts.rows, opts.cols)
+
+    try:
+        create_doc(paths, output_path, opts.rows, opts.cols, opts.paper_size, back_paths=back_paths)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to build document: {e}")
 
     filename = os.path.basename(output_path)
     return FileResponse(
