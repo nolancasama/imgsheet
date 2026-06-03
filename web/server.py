@@ -151,7 +151,7 @@ def progress(job_id: str):
         job_queue = jobs[job_id]["queue"]
         while True:
             try:
-                msg = job_queue.get(timeout=60)
+                msg = job_queue.get(timeout=20)
             except q_module.Empty:
                 yield ": keepalive\n\n"
                 continue

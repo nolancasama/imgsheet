@@ -743,6 +743,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
             prompt, needed, urls = search_results[i]
             char_candidate_paths = []
             char_paths = []
+            on_progress(f"Processing: {prompt} ({len(urls)} candidates)...")
 
             # Test mode: generate solid-color placeholder images, no network
             if options.search_engine == "test":
