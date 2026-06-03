@@ -534,7 +534,7 @@ def search_images(query, count, start=0, engine="serpapi"):
 # =========================
 # IMAGE PROCESS
 # =========================
-def process_image(url, target_px, seen, seen_lock=None):
+def process_image(url, target_px, seen, seen_lock=None, save_dir=None):
     try:
         res = session.get(url, timeout=6)
         if res.status_code != 200:
@@ -546,6 +546,7 @@ def process_image(url, target_px, seen, seen_lock=None):
         if raw.mode == "P" and "transparency" in raw.info:
             raw = raw.convert("RGBA")
         img = raw.convert("RGB")
+        raw = None  # free raw immediately
 
         if img.width < 400 or img.height < 400:
             return None
@@ -565,13 +566,21 @@ def process_image(url, target_px, seen, seen_lock=None):
                 return None
             seen.add(h)
 
-        img.thumbnail((1400, 2000))  # cap before smart_crop to limit memory
+        img.thumbnail((1400, 2000))
         img = smart_crop(img)
         img.thumbnail(target_px)
         bg = Image.new("RGB", target_px, (255, 255, 255))
         x = (target_px[0] - img.width) // 2
         y = (target_px[1] - img.height) // 2
         bg.paste(img, (x, y))
+        img = None  # free before saving
+
+        if save_dir:
+            import uuid
+            path = os.path.join(save_dir, f"img_{uuid.uuid4().hex[:10]}.jpg")
+            bg.save(path, "JPEG", quality=90)
+            bg = None
+            return path
         return bg
 
     except Exception:
@@ -785,7 +794,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
 
             # Phase 1: parallel downloads — save every passing image to disk immediately
             with ThreadPoolExecutor(max_workers=4) as executor:
-                futures = {executor.submit(process_image, url, (700, 1000), seen, seen_lock): url for url in urls}
+                futures = {executor.submit(process_image, url, (700, 1000), seen, seen_lock, TEMP_DIR): url for url in urls}
                 for future in as_completed(futures):
                     if cancel_event and cancel_event.is_set():
                         for f in futures:
@@ -794,10 +803,8 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                             prompt=prompt, image_paths=[], candidate_paths=char_candidate_paths
                         ))
                         raise InterruptedError("Cancelled by user.")
-                    img = future.result()
-                    if img:
-                        path = os.path.join(TEMP_DIR, f"c{i}_{len(char_candidate_paths)}.jpg")
-                        img.save(path, "JPEG", quality=90)
+                    path = future.result()
+                    if path:
                         char_candidate_paths.append(path)
                     _cand_limit = max(MAX_CLAUDE_CALLS_PER_PROMPT, needed * 2) if options.double_sided else MAX_CLAUDE_CALLS_PER_PROMPT
                     if len(char_candidate_paths) >= _cand_limit:
@@ -863,18 +870,16 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                     engine=options.search_engine
                 )
                 with ThreadPoolExecutor(max_workers=4) as rex:
-                    rfuts = {rex.submit(process_image, url, (700, 1000), seen, seen_lock): url for url in extra_urls}
+                    rfuts = {rex.submit(process_image, url, (700, 1000), seen, seen_lock, TEMP_DIR): url for url in extra_urls}
                     for rf in as_completed(rfuts):
                         if len(all_images) >= total:
                             for f in rfuts: f.cancel()
                             break
-                        img = rf.result()
-                        if not img:
+                        path = rf.result()
+                        if not path:
                             continue
-                        if options.use_claude and not claude_vision_check(img, cr.prompt):
+                        if options.use_claude and not claude_vision_check(Image.open(path).convert("RGB"), cr.prompt):
                             continue
-                        path = os.path.join(TEMP_DIR, f"sf_{len(all_images)}.jpg")
-                        img.save(path)
                         all_images.append(path)
                         cr.image_paths.append(path)
                         for f in rfuts: f.cancel()
