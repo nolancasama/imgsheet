@@ -536,7 +536,7 @@ def search_images(query, count, start=0, engine="serpapi"):
 # =========================
 def process_image(url, target_px, seen, seen_lock=None):
     try:
-        res = session.get(url, timeout=6)
+        res = session.get(url, timeout=3)
         if res.status_code != 200:
             return None
         if "image" not in res.headers.get("Content-Type", ""):
