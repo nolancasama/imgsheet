@@ -542,7 +542,10 @@ def process_image(url, target_px, seen, seen_lock=None):
         if "image" not in res.headers.get("Content-Type", ""):
             return None
 
-        img = Image.open(BytesIO(res.content)).convert("RGB")
+        raw = Image.open(BytesIO(res.content))
+        if raw.mode == "P" and "transparency" in raw.info:
+            raw = raw.convert("RGBA")
+        img = raw.convert("RGB")
 
         if img.width < 400 or img.height < 400:
             return None
