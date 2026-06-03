@@ -562,6 +562,7 @@ def process_image(url, target_px, seen, seen_lock=None):
                 return None
             seen.add(h)
 
+        img.thumbnail((1400, 2000))  # cap before smart_crop to limit memory
         img = smart_crop(img)
         img.thumbnail(target_px)
         bg = Image.new("RGB", target_px, (255, 255, 255))
