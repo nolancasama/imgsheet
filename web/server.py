@@ -127,8 +127,11 @@ def generate(body: GenerateRequest):
             _init_card_state(job_id, result, options)
             job_queue.put("__done__")
         except Exception as e:
-            jobs[job_id]["error"] = str(e)
-            job_queue.put(f"__error__:{e}")
+            import traceback
+            msg = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+            traceback.print_exc()
+            jobs[job_id]["error"] = msg
+            job_queue.put(f"__error__:{msg}")
 
     t = threading.Thread(target=run, daemon=True)
     t.start()
