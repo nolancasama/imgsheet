@@ -5,4 +5,3 @@ requests
 Pillow
 python-docx
 ddgs
-anthropic

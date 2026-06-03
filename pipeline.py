@@ -2,7 +2,6 @@ import os
 import re
 import math
 import random
-import base64
 import smtplib
 import subprocess
 import threading
@@ -18,18 +17,14 @@ from email import encoders
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from io import BytesIO
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageFile
 from docx import Document
 from docx.shared import Mm
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
 
-try:
-    import anthropic
-    ANTHROPIC_AVAILABLE = True
-except ImportError:
-    ANTHROPIC_AVAILABLE = False
+# Allow PIL to load slightly-truncated downloads instead of erroring them out
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # =========================
 # CONFIG
@@ -37,7 +32,6 @@ except ImportError:
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "")
 SERPER_API_KEY = os.environ.get("SERPER_API_KEY", "")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_APP_PASS = os.environ.get("GMAIL_APP_PASS", "")
 
@@ -53,7 +47,7 @@ BORDER_TOLERANCE = 15
 VIBRANCE_THRESHOLD = 0.07
 COMPRESSION_THRESHOLD = 0.04
 CENTER_BIAS_RATIO = 0.35
-MAX_CLAUDE_CALLS_PER_PROMPT = 15
+MAX_CANDIDATES_PER_PROMPT = 15
 
 PAPER_SIZES = {
     "B4":     (257, 364),
@@ -120,7 +114,6 @@ STYLE_MODIFIERS = [
 # =========================
 @dataclass
 class PipelineOptions:
-    use_claude: bool = False
     export_pdf: bool = False
     randomize: bool = False
     search_engine: str = "serpapi"
@@ -151,7 +144,10 @@ class PipelineResult:
 # =========================
 def create_session():
     s = requests.Session()
-    retries = Retry(total=3, backoff_factor=1, status_forcelist=[403, 429, 500, 502, 503, 504])
+    # This session is used only for image downloads. Keep retries minimal: a 403
+    # (hotlink-blocked) never recovers on retry, and long backoffs stall the
+    # 4-worker download pool on dead URLs — the main cause of slow generation.
+    retries = Retry(total=1, backoff_factor=0.3, status_forcelist=[429, 503])
     adapter = HTTPAdapter(max_retries=retries)
     s.mount("http://", adapter)
     s.mount("https://", adapter)
@@ -328,46 +324,6 @@ def average_hash(img, size=8):
     return tuple(p > avg for p in pixels)
 
 
-def claude_vision_check(img, prompt):
-    try:
-        key = ANTHROPIC_API_KEY or os.environ.get("ANTHROPIC_API_KEY", "")
-        if not key:
-            return True
-        buffer = BytesIO()
-        img.save(buffer, format="JPEG", quality=85)
-        img_b64 = base64.b64encode(buffer.getvalue()).decode()
-        client = anthropic.Anthropic(api_key=key)
-        msg = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=20,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": img_b64}},
-                    {"type": "text", "text": (
-                        f"This image is a candidate for a poster, t-shirt, or trading card featuring: '{prompt}'.\n\n"
-                        f"REJECT if ANY of the following are true:\n"
-                        f"- The subject is not clearly visible or not the dominant focus\n"
-                        f"- This is a photo of physical artwork, a print, poster, or screen showing the image\n"
-                        f"- This is a photo of merchandise (figurine, box, product on a shelf)\n"
-                        f"- The image contains multiple panels, comparisons, or collages\n"
-                        f"- There are watermarks, signatures, or overlaid text (beyond minor corner signatures)\n"
-                        f"- The subject occupies less than 30% of the image\n"
-                        f"- The art quality looks amateur, heavily pixelated, or like a low-effort edit\n\n"
-                        f"ACCEPT only if it is clean, single-subject artwork or illustration that would look great printed on merchandise.\n\n"
-                        f"Reply with ACCEPT or REJECT followed by a 3-word reason."
-                    )}
-                ]
-            }]
-        )
-        result = msg.content[0].text.strip().upper()
-        print(f"Claude: {msg.content[0].text.strip()}")
-        return result.startswith("ACCEPT")
-    except Exception as e:
-        print("Claude vision error:", e)
-        return True
-
-
 # =========================
 # SEARCH
 # =========================
@@ -449,8 +405,15 @@ def _search_serpapi(query, count, start=0):
             },
             timeout=20
         )
+        if res.status_code != 200:
+            print(f"SerpAPI search error: HTTP {res.status_code} — {res.text[:200]}")
+            return []
+        data = res.json()
+        if data.get("error"):
+            print(f"SerpAPI error: {data['error']}")
+            return []
         items = []
-        for r in res.json().get("images_results", []):
+        for r in data.get("images_results", []):
             items.append({
                 "original": r.get("original"),
                 "original_width": r.get("original_width", 0),
@@ -583,7 +546,8 @@ def process_image(url, target_px, seen, seen_lock=None, save_dir=None):
             return path
         return bg
 
-    except Exception:
+    except Exception as e:
+        print(f"process_image dropped {url[:80]} ({type(e).__name__})")
         return None
 
 
@@ -604,16 +568,7 @@ def _mirror_rows(paths, rows, cols):
     return result
 
 
-def _set_row_height(row, height_mm):
-    tr = row._tr
-    trPr = tr.get_or_add_trPr()
-    trHeight = OxmlElement('w:trHeight')
-    trHeight.set(qn('w:val'), str(int(height_mm * 56.692)))  # mm to twips
-    trHeight.set(qn('w:hRule'), 'exact')
-    trPr.append(trHeight)
-
-
-def _build_table(doc, image_paths, rows, cols, row_height_mm=None):
+def _build_table(doc, image_paths, rows, cols):
     table = doc.add_table(rows=rows, cols=cols)
     tblBorders = OxmlElement('w:tblBorders')
     for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
@@ -626,16 +581,18 @@ def _build_table(doc, image_paths, rows, cols, row_height_mm=None):
     table._tbl.tblPr.append(tblBorders)
     i = 0
     for r in range(rows):
-        if row_height_mm:
-            _set_row_height(table.rows[r], row_height_mm)
         for c in range(cols):
             if i >= len(image_paths):
                 break
             cell = table.cell(r, c)
-            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
             para = cell.paragraphs[0]
             para.alignment = 1
-            para.add_run().add_picture(image_paths[i], width=Mm(FIXED_CELL_W_MM))
+            try:
+                para.add_run().add_picture(image_paths[i], width=Mm(FIXED_CELL_W_MM))
+            except Exception as e:
+                # A single unreadable image shouldn't sink the whole document —
+                # leave the cell blank and keep going.
+                print(f"Skipping unreadable image {image_paths[i]}: {e}")
             i += 1
 
 
@@ -654,8 +611,7 @@ def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4", back_p
     section.left_margin = Mm(side_margin)
     section.right_margin = Mm(side_margin)
 
-    row_h = (h_mm - PAGE_MARGIN_MM * 2) / rows
-    _build_table(doc, image_paths, rows, cols, row_height_mm=row_h)
+    _build_table(doc, image_paths, rows, cols)
 
     if back_paths:
         # Page break then back sheet (mirrored columns) in the same document
@@ -664,7 +620,7 @@ def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4", back_p
         br = OxmlElement('w:br')
         br.set(qn('w:type'), 'page')
         run._r.append(br)
-        _build_table(doc, back_paths, rows, cols, row_height_mm=row_h)
+        _build_table(doc, back_paths, rows, cols)
 
     doc.save(output_name)
 
@@ -718,18 +674,17 @@ def make_sheet_filename(prompts, timestamp, suffix=""):
     return f"{safe}_{timestamp}{suffix}.docx"
 
 
-def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[[str], None], cancel_event=None, output_dir=None) -> PipelineResult:
-    clear_temp_dir()
+def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[[str], None], cancel_event=None, output_dir=None, temp_dir=None) -> PipelineResult:
+    if temp_dir is None:
+        temp_dir = TEMP_DIR
+        clear_temp_dir()
+    else:
+        os.makedirs(temp_dir, exist_ok=True)
 
     if not prompts:
         raise ValueError("Enter at least one prompt.")
     if len(prompts) > ROWS * COLS:
         raise ValueError(f"Max {ROWS * COLS} prompts.")
-
-    if options.use_claude and not ANTHROPIC_AVAILABLE:
-        raise RuntimeError("anthropic package not installed. Run: pip install anthropic")
-    if options.use_claude and not (ANTHROPIC_API_KEY or os.environ.get("ANTHROPIC_API_KEY")):
-        raise RuntimeError("Set ANTHROPIC_API_KEY in pipeline.py or as an environment variable.")
 
     seen = set()
 
@@ -740,6 +695,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
     all_images = []
     all_back_images = []
     character_results = []
+    dry_prompts = set()  # prompts that yielded no usable candidates — skip in shortfall
     seen_lock = threading.Lock()
 
     # Parallel search phase — all prompts searched simultaneously
@@ -776,7 +732,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                     h = hash(f"{prompt}{j}") & 0xFFFFFF
                     color = ((h >> 16) & 0xFF, (h >> 8) & 0xFF, h & 0xFF)
                     img = Image.new("RGB", (700, 1000), color)
-                    path = os.path.join(TEMP_DIR, f"c{i}_{j}.jpg")
+                    path = os.path.join(temp_dir, f"c{i}_{j}.jpg")
                     img.save(path, "JPEG", quality=90)
                     char_candidate_paths.append(path)
                 char_paths = char_candidate_paths[:needed]
@@ -794,7 +750,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
 
             # Phase 1: parallel downloads — save every passing image to disk immediately
             with ThreadPoolExecutor(max_workers=4) as executor:
-                futures = {executor.submit(process_image, url, (700, 1000), seen, seen_lock, TEMP_DIR): url for url in urls}
+                futures = {executor.submit(process_image, url, (700, 1000), seen, seen_lock, temp_dir): url for url in urls}
                 for future in as_completed(futures):
                     if cancel_event and cancel_event.is_set():
                         for f in futures:
@@ -806,35 +762,17 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                     path = future.result()
                     if path:
                         char_candidate_paths.append(path)
-                    _cand_limit = max(MAX_CLAUDE_CALLS_PER_PROMPT, needed * 2) if options.double_sided else MAX_CLAUDE_CALLS_PER_PROMPT
+                    _cand_limit = max(MAX_CANDIDATES_PER_PROMPT, needed * 2) if options.double_sided else MAX_CANDIDATES_PER_PROMPT
                     if len(char_candidate_paths) >= _cand_limit:
                         for f in futures:
                             f.cancel()
                         break
 
-            # Phase 2: select from candidates (Claude or auto)
-            if options.use_claude and char_candidate_paths:
-                on_progress(f"Claude checking {len(char_candidate_paths)} images for {prompt}...")
-                with ThreadPoolExecutor(max_workers=4) as cex:
-                    cfuts = {
-                        cex.submit(claude_vision_check, Image.open(p).convert("RGB"), prompt): p
-                        for p in char_candidate_paths
-                    }
-                    for cf in as_completed(cfuts):
-                        if len(char_paths) >= needed:
-                            for f in cfuts:
-                                f.cancel()
-                            break
-                        p = cfuts[cf]
-                        if cf.result():
-                            on_progress(f"{prompt}: accepted image {len(char_paths) + 1}/{needed}")
-                            char_paths.append(p)
-                            all_images.append(p)
-            else:
-                char_paths = char_candidate_paths[:needed]
-                all_images.extend(char_paths)
-                for j in range(len(char_paths)):
-                    on_progress(f"{prompt}: image {j + 1}/{len(char_paths)}")
+            # Phase 2: take the first `needed` candidates for the sheet
+            char_paths = char_candidate_paths[:needed]
+            all_images.extend(char_paths)
+            for j in range(len(char_paths)):
+                on_progress(f"{prompt}: image {j + 1}/{len(char_paths)}")
 
             if options.double_sided:
                 used_set = set(char_paths)
@@ -850,6 +788,8 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                     char_back = available_back[:]
                 all_back_images.extend(char_back)
 
+            if not char_candidate_paths:
+                dry_prompts.add(prompt)
             character_results.append(CharacterResult(
                 prompt=prompt, image_paths=char_paths, candidate_paths=char_candidate_paths
             ))
@@ -862,23 +802,26 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                     break
                 if cancel_event and cancel_event.is_set():
                     raise InterruptedError("Cancelled by user.")
+                # Skip prompts that already came up empty — re-searching them just
+                # returns the same URLs (all blocked by `seen`) and wastes API calls.
+                if cr.prompt in dry_prompts:
+                    continue
                 on_progress(f"Filling slot {len(all_images) + 1}/{total}: {cr.prompt}...")
+                # Offset past the results already consumed so we fetch fresh URLs.
                 extra_urls = search_images(
                     cr.prompt,
                     10,
-                    start=random.randint(0, 14) if options.randomize else 0,
+                    start=random.randint(10, 30),
                     engine=options.search_engine
                 )
                 with ThreadPoolExecutor(max_workers=4) as rex:
-                    rfuts = {rex.submit(process_image, url, (700, 1000), seen, seen_lock, TEMP_DIR): url for url in extra_urls}
+                    rfuts = {rex.submit(process_image, url, (700, 1000), seen, seen_lock, temp_dir): url for url in extra_urls}
                     for rf in as_completed(rfuts):
                         if len(all_images) >= total:
                             for f in rfuts: f.cancel()
                             break
                         path = rf.result()
                         if not path:
-                            continue
-                        if options.use_claude and not claude_vision_check(Image.open(path).convert("RGB"), cr.prompt):
                             continue
                         all_images.append(path)
                         cr.image_paths.append(path)
@@ -894,6 +837,13 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
         needed = total - len(all_images)
         all_images += [pool[i % len(pool)] for i in range(needed)]
         on_progress(f"Padded {needed} blank slot(s) by repeating existing images.")
+
+    # Nothing usable at all — surface a clear reason instead of saving a blank sheet
+    if not all_images:
+        raise RuntimeError(
+            "No usable images were found for any character. Check your API key / "
+            "search engine selection, or try different names."
+        )
 
     # Pad back images to match front count (shortfall slots get cycled back images)
     if options.double_sided and all_images:
@@ -929,7 +879,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
             on_progress("Converting to PDF...")
             try:
                 subprocess.run(
-                    [soffice, "--headless", "--convert-to", "pdf", "--outdir", downloads_dir, output_docx],
+                    [soffice, "--headless", "--convert-to", "pdf", "--outdir", output_dir, output_docx],
                     check=True
                 )
                 output_pdf = output_docx.replace(".docx", ".pdf")

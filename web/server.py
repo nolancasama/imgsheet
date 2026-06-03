@@ -1,6 +1,8 @@
 import os
 import sys
 import uuid
+import time
+import shutil
 import queue as q_module
 import threading
 
@@ -15,7 +17,7 @@ from typing import Optional, List
 from io import BytesIO
 from PIL import Image
 
-from pipeline import run_pipeline, PipelineOptions, create_doc
+from pipeline import run_pipeline, PipelineOptions, create_doc, TEMP_DIR
 
 # =========================
 # SETUP
@@ -26,6 +28,27 @@ OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+JOB_TTL = 3600  # seconds before a job's files and record are evicted
+
+
+def _evict_old_jobs():
+    cutoff = time.time() - JOB_TTL
+    expired = [jid for jid, j in jobs.items() if j.get("created_at", 0) < cutoff]
+    for jid in expired:
+        job = jobs.pop(jid)
+        result = job.get("result")
+        if result and result.output_docx:
+            try:
+                os.remove(result.output_docx)
+            except Exception:
+                pass
+        td = job.get("temp_dir")
+        if td and os.path.isdir(td):
+            try:
+                shutil.rmtree(td)
+            except Exception:
+                pass
 
 app = FastAPI(title="ImgSheet Web")
 
@@ -67,7 +90,6 @@ def _init_card_state(job_id, result, options):
 # =========================
 class GenerateRequest(BaseModel):
     prompts: list[str]
-    use_claude: bool = False
     export_pdf: bool = False
     randomize: bool = False
     search_engine: str = "serpapi"
@@ -92,21 +114,26 @@ def index():
 
 @app.post("/generate")
 def generate(body: GenerateRequest):
+    _evict_old_jobs()
+
     job_id = str(uuid.uuid4())
     job_queue = q_module.Queue()
+    job_temp_dir = os.path.join(TEMP_DIR, job_id)
 
     jobs[job_id] = {
         "queue": job_queue,
         "result": None,
         "error": None,
+        "status": "running",
         "options": None,
         "cards": [],
         "pools": {},
         "back_cards": [],
+        "created_at": time.time(),
+        "temp_dir": job_temp_dir,
     }
 
     options = PipelineOptions(
-        use_claude=body.use_claude,
         export_pdf=body.export_pdf,
         randomize=body.randomize,
         search_engine=body.search_engine,
@@ -122,15 +149,17 @@ def generate(body: GenerateRequest):
             def on_progress(msg: str):
                 job_queue.put(msg)
 
-            result = run_pipeline(body.prompts, options, on_progress, output_dir=OUTPUTS_DIR)
+            result = run_pipeline(body.prompts, options, on_progress, output_dir=OUTPUTS_DIR, temp_dir=job_temp_dir)
             jobs[job_id]["result"] = result
             _init_card_state(job_id, result, options)
+            jobs[job_id]["status"] = "done"
             job_queue.put("__done__")
         except Exception as e:
             import traceback
             msg = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
             traceback.print_exc()
             jobs[job_id]["error"] = msg
+            jobs[job_id]["status"] = "error"
             job_queue.put(f"__error__:{msg}")
 
     t = threading.Thread(target=run, daemon=True)
@@ -151,7 +180,18 @@ def progress(job_id: str):
         )
 
     def event_stream():
-        job_queue = jobs[job_id]["queue"]
+        job = jobs[job_id]
+        # The client may (re)connect after the job already finished — e.g. the SSE
+        # connection dropped near completion and EventSource auto-reconnected.
+        # Replay the terminal event instead of blocking forever on a queue that
+        # already emitted it (which looked like "nothing was generated").
+        if job.get("status") == "done":
+            yield f"event: done\ndata: {job_id}\n\n"
+            return
+        if job.get("status") == "error":
+            yield f"event: error\ndata: {job.get('error') or 'Unknown error'}\n\n"
+            return
+        job_queue = job["queue"]
         while True:
             try:
                 msg = job_queue.get(timeout=20)
@@ -190,7 +230,10 @@ def get_image(job_id: str, idx: int):
         raise HTTPException(status_code=404, detail="Job not found")
     if idx < 0 or idx >= len(job["cards"]):
         raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(job["cards"][idx]["path"], media_type="image/jpeg")
+    path = job["cards"][idx]["path"]
+    if not os.path.exists(path):
+        raise HTTPException(status_code=410, detail="Image file no longer on disk. Please regenerate.")
+    return FileResponse(path, media_type="image/jpeg")
 
 
 @app.get("/back_image/{job_id}/{idx}")
@@ -199,6 +242,8 @@ def get_back_image(job_id: str, idx: int):
     back = job.get("back_cards", []) if job else []
     if idx < 0 or idx >= len(back):
         raise HTTPException(status_code=404, detail="Image not found")
+    if not os.path.exists(back[idx]):
+        raise HTTPException(status_code=410, detail="Image file no longer on disk. Please regenerate.")
     return FileResponse(back[idx], media_type="image/jpeg")
 
 
@@ -306,8 +351,9 @@ def download(job_id: str):
         )
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=traceback.format_exc())
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to build the document. Please try regenerating.")
 
 
 if __name__ == "__main__":
