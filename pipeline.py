@@ -595,7 +595,16 @@ def _mirror_rows(paths, rows, cols):
     return result
 
 
-def _build_table(doc, image_paths, rows, cols):
+def _set_row_height(row, height_mm):
+    tr = row._tr
+    trPr = tr.get_or_add_trPr()
+    trHeight = OxmlElement('w:trHeight')
+    trHeight.set(qn('w:val'), str(int(height_mm * 56.692)))  # mm to twips
+    trHeight.set(qn('w:hRule'), 'exact')
+    trPr.append(trHeight)
+
+
+def _build_table(doc, image_paths, rows, cols, row_height_mm=None):
     table = doc.add_table(rows=rows, cols=cols)
     tblBorders = OxmlElement('w:tblBorders')
     for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
@@ -608,6 +617,8 @@ def _build_table(doc, image_paths, rows, cols):
     table._tbl.tblPr.append(tblBorders)
     i = 0
     for r in range(rows):
+        if row_height_mm:
+            _set_row_height(table.rows[r], row_height_mm)
         for c in range(cols):
             if i >= len(image_paths):
                 break
@@ -634,7 +645,8 @@ def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4", back_p
     section.left_margin = Mm(side_margin)
     section.right_margin = Mm(side_margin)
 
-    _build_table(doc, image_paths, rows, cols)
+    row_h = (h_mm - PAGE_MARGIN_MM * 2) / rows
+    _build_table(doc, image_paths, rows, cols, row_height_mm=row_h)
 
     if back_paths:
         # Page break then back sheet (mirrored columns) in the same document
@@ -643,7 +655,7 @@ def create_doc(image_paths, output_name, rows=5, cols=5, paper_size="B4", back_p
         br = OxmlElement('w:br')
         br.set(qn('w:type'), 'page')
         run._r.append(br)
-        _build_table(doc, back_paths, rows, cols)
+        _build_table(doc, back_paths, rows, cols, row_height_mm=row_h)
 
     doc.save(output_name)
 
