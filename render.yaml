@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: imgsheet
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn web.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SERPAPI_KEY
+        sync: false
+      - key: BRAVE_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASS
+        sync: false
