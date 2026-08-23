@@ -290,7 +290,7 @@
       <label class="section-label">Options</label>
 
       <select id="opt-engine">
-        <option value="serpapi">Google (SerpAPI)</option>
+        <option value="serpapi">Google (SerpAPI) - checking usage...</option>
         <option value="serper">Google (Serper)</option>
         <option value="brave">Brave</option>
         <option value="test">Test (no search)</option>
@@ -417,6 +417,27 @@
     return { rows: r, cols: c };
   }
 
+  async function refreshSerpApiUsage() {
+    const option = optEngine.querySelector('option[value="serpapi"]');
+    if (!option) return;
+    try {
+      const response = await fetch('/usage/serpapi', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Server error ${response.status}`);
+      const usage = await response.json();
+      if (!usage.configured) {
+        option.textContent = 'Google (SerpAPI) - key not configured';
+      } else if (!usage.available || usage.remaining == null) {
+        option.textContent = 'Google (SerpAPI) - usage unavailable';
+      } else if (usage.monthly_limit == null) {
+        option.textContent = `Google (SerpAPI) - ${usage.remaining} left`;
+      } else {
+        option.textContent = `Google (SerpAPI) - ${usage.remaining}/${usage.monthly_limit} left`;
+      }
+    } catch {
+      option.textContent = 'Google (SerpAPI) - usage unavailable';
+    }
+  }
+
   // ===== HISTORY =====
   const HISTORY_KEY = 'imgsheet_history';
 
@@ -449,6 +470,7 @@
   });
 
   renderHistory();
+  refreshSerpApiUsage();
 
   const PAPER_LAYOUTS = { B4: '5x5', B5: '3x3', A3: '5x6', A4: '4x4', Letter: '4x4' };
   optPaper.addEventListener('change', () => {
@@ -822,6 +844,7 @@
       downloadArea.appendChild(link);
 
       saveToHistory(names);
+      refreshSerpApiUsage();
       viewSheetBtn.style.display = 'block';
 
       try {

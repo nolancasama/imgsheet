@@ -5,6 +5,7 @@ import time
 import shutil
 import queue as q_module
 import threading
+import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -30,6 +31,9 @@ os.makedirs(OUTPUTS_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 JOB_TTL = 3600  # seconds before a job's files and record are evicted
+SERPAPI_USAGE_CACHE_TTL = 15
+serpapi_usage_cache = {"expires_at": 0.0, "payload": None}
+serpapi_usage_lock = threading.Lock()
 
 
 def _evict_old_jobs():
@@ -110,6 +114,55 @@ class ReorderBody(BaseModel):
 @app.get("/")
 def index():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+
+@app.get("/usage/serpapi")
+def serpapi_usage():
+    """Return quota totals without exposing the SerpApi key or account details."""
+    api_key = os.environ.get("SERPAPI_KEY", "").strip()
+    if not api_key:
+        return {"configured": False, "available": False}
+
+    now = time.time()
+    with serpapi_usage_lock:
+        cached = serpapi_usage_cache["payload"]
+        if cached is not None and serpapi_usage_cache["expires_at"] > now:
+            return cached
+
+    try:
+        response = requests.get(
+            "https://serpapi.com/account.json",
+            params={"api_key": api_key},
+            timeout=10,
+        )
+        response.raise_for_status()
+        account = response.json()
+        if account.get("error"):
+            raise ValueError("SerpApi returned an account error")
+
+        monthly_limit = account.get("searches_per_month")
+        remaining = account.get("total_searches_left")
+        if remaining is None:
+            remaining = account.get("plan_searches_left")
+        used = account.get("this_month_usage")
+        if used is None and monthly_limit is not None and remaining is not None:
+            used = max(0, monthly_limit - remaining)
+
+        payload = {
+            "configured": True,
+            "available": True,
+            "monthly_limit": monthly_limit,
+            "remaining": remaining,
+            "used": used,
+            "renewal_date": account.get("plan_renewal_date"),
+        }
+    except (requests.RequestException, ValueError, TypeError):
+        payload = {"configured": True, "available": False}
+
+    with serpapi_usage_lock:
+        serpapi_usage_cache["payload"] = payload
+        serpapi_usage_cache["expires_at"] = now + SERPAPI_USAGE_CACHE_TTL
+    return payload
 
 
 @app.post("/generate")
