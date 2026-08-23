@@ -59,7 +59,26 @@ def _worker_count(name, default, maximum):
 
 # Keep image processing within small hosting-instance CPU and memory limits.
 SEARCH_WORKERS = _worker_count("IMGSHEET_SEARCH_WORKERS", 2, 5)
-DOWNLOAD_WORKERS = _worker_count("IMGSHEET_DOWNLOAD_WORKERS", 2, 4)
+DOWNLOAD_WORKERS = _worker_count("IMGSHEET_DOWNLOAD_WORKERS", 1, 4)
+
+
+def _size_limit(name, default, minimum, maximum):
+    try:
+        return max(minimum, min(int(os.environ.get(name, default)), maximum))
+    except (TypeError, ValueError):
+        return default
+
+
+# Search results occasionally point at enormous source images.  The output card
+# is only 700x1000, so accepting more than 8 megapixels adds no useful quality
+# but can make Pillow allocate hundreds of MB while decoding/converting it.
+MAX_DOWNLOAD_BYTES = _size_limit(
+    "IMGSHEET_MAX_DOWNLOAD_BYTES", 10 * 1024 * 1024, 1024 * 1024, 25 * 1024 * 1024
+)
+MAX_SOURCE_PIXELS = _size_limit(
+    "IMGSHEET_MAX_SOURCE_PIXELS", 8_000_000, 1_000_000, 20_000_000
+)
+PROCESSING_MAX_SIZE = (1400, 2000)
 
 PAPER_SIZES = {
     "B4":     (257, 364),
@@ -510,21 +529,55 @@ def search_images(query, count, start=0, engine="serpapi"):
 # IMAGE PROCESS
 # =========================
 def process_image(url, target_px, seen, seen_lock=None, save_dir=None):
+    res = None
+    image_data = None
+    img = None
     try:
-        res = session.get(url, timeout=6)
+        # Stream into a bounded buffer.  requests.get(...).content previously
+        # retained an unlimited response body for the lifetime of this function.
+        res = session.get(url, timeout=(4, 8), stream=True)
         if res.status_code != 200:
             return None
         if "image" not in res.headers.get("Content-Type", ""):
             return None
 
-        raw = Image.open(BytesIO(res.content))
-        if raw.mode == "P" and "transparency" in raw.info:
-            raw = raw.convert("RGBA")
-        img = raw.convert("RGB")
-        raw = None  # free raw immediately
+        content_length = res.headers.get("Content-Length")
+        if content_length:
+            try:
+                if int(content_length) > MAX_DOWNLOAD_BYTES:
+                    print(f"Rejected: download exceeds {MAX_DOWNLOAD_BYTES // (1024 * 1024)} MB")
+                    return None
+            except ValueError:
+                pass
 
-        if img.width < 400 or img.height < 400:
-            return None
+        image_data = BytesIO()
+        downloaded = 0
+        for chunk in res.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            downloaded += len(chunk)
+            if downloaded > MAX_DOWNLOAD_BYTES:
+                print(f"Rejected: download exceeds {MAX_DOWNLOAD_BYTES // (1024 * 1024)} MB")
+                return None
+            image_data.write(chunk)
+        image_data.seek(0)
+
+        # Image.open reads headers lazily, allowing a strict pixel check before
+        # the full raster is decoded.  JPEG draft mode also asks the decoder to
+        # produce a smaller raster directly when possible.
+        with Image.open(image_data) as raw:
+            width, height = raw.size
+            if width < 400 or height < 400:
+                return None
+            if width * height > MAX_SOURCE_PIXELS:
+                print(
+                    f"Rejected: source is {width}x{height} "
+                    f"({width * height:,} pixels)"
+                )
+                return None
+            raw.draft("RGB", PROCESSING_MAX_SIZE)
+            raw.thumbnail(PROCESSING_MAX_SIZE, Image.Resampling.LANCZOS)
+            img = raw.convert("RGB")
 
         if sharpness_score(img) < SHARPNESS_THRESHOLD:
             print("Rejected: blurry")
@@ -541,26 +594,36 @@ def process_image(url, target_px, seen, seen_lock=None, save_dir=None):
                 return None
             seen.add(h)
 
-        img.thumbnail((1400, 2000))
-        img = smart_crop(img)
+        cropped = smart_crop(img)
+        if cropped is not img:
+            img.close()
+            img = cropped
         img.thumbnail(target_px)
         bg = Image.new("RGB", target_px, (255, 255, 255))
         x = (target_px[0] - img.width) // 2
         y = (target_px[1] - img.height) // 2
         bg.paste(img, (x, y))
-        img = None  # free before saving
+        img.close()
+        img = None
 
         if save_dir:
             import uuid
             path = os.path.join(save_dir, f"img_{uuid.uuid4().hex[:10]}.jpg")
             bg.save(path, "JPEG", quality=90)
-            bg = None
+            bg.close()
             return path
         return bg
 
     except Exception as e:
         print(f"process_image dropped {url[:80]} ({type(e).__name__})")
         return None
+    finally:
+        if img is not None:
+            img.close()
+        if image_data is not None:
+            image_data.close()
+        if res is not None:
+            res.close()
 
 
 # =========================

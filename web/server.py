@@ -18,7 +18,16 @@ from typing import Optional, List
 from io import BytesIO
 from PIL import Image
 
-from pipeline import run_pipeline, PipelineOptions, create_doc, TEMP_DIR
+from pipeline import (
+    run_pipeline,
+    PipelineOptions,
+    create_doc,
+    TEMP_DIR,
+    DOWNLOAD_WORKERS,
+    MAX_DOWNLOAD_BYTES,
+    MAX_SOURCE_PIXELS,
+    PROCESSING_MAX_SIZE,
+)
 
 # =========================
 # SETUP
@@ -53,7 +62,8 @@ def _current_memory_mb():
 print(
     f"ImgSheet process started pid={os.getpid()} "
     f"search_workers={os.environ.get('IMGSHEET_SEARCH_WORKERS', '2')} "
-    f"download_workers={os.environ.get('IMGSHEET_DOWNLOAD_WORKERS', '2')}",
+    f"download_workers={DOWNLOAD_WORKERS} "
+    f"max_source_pixels={MAX_SOURCE_PIXELS}",
     flush=True,
 )
 
@@ -148,6 +158,8 @@ def health():
             1 for job in list(jobs.values()) if job.get("status") == "running"
         ),
         "memory_mb": _current_memory_mb(),
+        "download_workers": DOWNLOAD_WORKERS,
+        "max_source_pixels": MAX_SOURCE_PIXELS,
     }
 
 
@@ -405,14 +417,30 @@ async def upload_card(job_id: str, card_idx: int, file: UploadFile = File(...)):
     job = jobs.get(job_id)
     if not job or not job["result"]:
         raise HTTPException(status_code=404, detail="Job not found")
-    content = await file.read()
+    content = await file.read(MAX_DOWNLOAD_BYTES + 1)
+    if len(content) > MAX_DOWNLOAD_BYTES:
+        max_mb = MAX_DOWNLOAD_BYTES // (1024 * 1024)
+        raise HTTPException(status_code=413, detail=f"Image file is too large ({max_mb} MB maximum)")
+    img = None
     try:
-        img = Image.open(BytesIO(content)).convert("RGB")
+        with Image.open(BytesIO(content)) as raw:
+            width, height = raw.size
+            if width * height > MAX_SOURCE_PIXELS:
+                raise ValueError(
+                    f"Image dimensions are too large ({width}x{height}); "
+                    f"{MAX_SOURCE_PIXELS / 1_000_000:g} megapixels maximum"
+                )
+            raw.draft("RGB", PROCESSING_MAX_SIZE)
+            raw.thumbnail(PROCESSING_MAX_SIZE, Image.Resampling.LANCZOS)
+            img = raw.convert("RGB")
         fname = f"upload_{job_id}_{card_idx}_{uuid.uuid4().hex[:6]}.jpg"
         path = os.path.join(UPLOAD_DIR, fname)
         img.save(path, "JPEG", quality=92)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image: {e}")
+    finally:
+        if img is not None:
+            img.close()
     cards = job["cards"]
     entry = {"path": path, "char": "upload", "char_idx": -1}
     if card_idx < len(cards):
