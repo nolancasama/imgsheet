@@ -34,6 +34,28 @@ JOB_TTL = 3600  # seconds before a job's files and record are evicted
 SERPAPI_USAGE_CACHE_TTL = 15
 serpapi_usage_cache = {"expires_at": 0.0, "payload": None}
 serpapi_usage_lock = threading.Lock()
+job_execution_lock = threading.Lock()
+PROCESS_STARTED_AT = time.time()
+
+
+def _current_memory_mb():
+    """Return current Linux RSS when available (Render), otherwise None."""
+    try:
+        with open("/proc/self/status", encoding="utf-8") as status_file:
+            for line in status_file:
+                if line.startswith("VmRSS:"):
+                    return round(int(line.split()[1]) / 1024, 1)
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
+print(
+    f"ImgSheet process started pid={os.getpid()} "
+    f"search_workers={os.environ.get('IMGSHEET_SEARCH_WORKERS', '2')} "
+    f"download_workers={os.environ.get('IMGSHEET_DOWNLOAD_WORKERS', '2')}",
+    flush=True,
+)
 
 
 def _evict_old_jobs():
@@ -116,6 +138,19 @@ def index():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health():
+    return {
+        "status": "ok",
+        "pid": os.getpid(),
+        "uptime_seconds": round(time.time() - PROCESS_STARTED_AT),
+        "active_jobs": sum(
+            1 for job in list(jobs.values()) if job.get("status") == "running"
+        ),
+        "memory_mb": _current_memory_mb(),
+    }
+
+
 @app.get("/usage/serpapi")
 def serpapi_usage():
     """Return quota totals without exposing the SerpApi key or account details."""
@@ -169,6 +204,12 @@ def serpapi_usage():
 def generate(body: GenerateRequest):
     _evict_old_jobs()
 
+    if not job_execution_lock.acquire(blocking=False):
+        raise HTTPException(
+            status_code=429,
+            detail="Another sheet is already generating. Please wait for it to finish.",
+        )
+
     job_id = str(uuid.uuid4())
     job_queue = q_module.Queue()
     job_temp_dir = os.path.join(TEMP_DIR, job_id)
@@ -201,6 +242,10 @@ def generate(body: GenerateRequest):
         try:
             def on_progress(msg: str):
                 job_queue.put(msg)
+                print(
+                    f"job={job_id} status={msg} memory_mb={_current_memory_mb()}",
+                    flush=True,
+                )
 
             result = run_pipeline(body.prompts, options, on_progress, output_dir=OUTPUTS_DIR, temp_dir=job_temp_dir)
             jobs[job_id]["result"] = result
@@ -214,9 +259,16 @@ def generate(body: GenerateRequest):
             jobs[job_id]["error"] = msg
             jobs[job_id]["status"] = "error"
             job_queue.put(f"__error__:{msg}")
+        finally:
+            job_execution_lock.release()
 
-    t = threading.Thread(target=run, daemon=True)
-    t.start()
+    try:
+        t = threading.Thread(target=run, daemon=True)
+        t.start()
+    except Exception:
+        job_execution_lock.release()
+        jobs.pop(job_id, None)
+        raise
 
     return {"job_id": job_id}
 
@@ -225,7 +277,7 @@ def generate(body: GenerateRequest):
 def progress(job_id: str):
     if job_id not in jobs:
         def not_found():
-            yield "event: error\ndata: Job not found\n\n"
+            yield "event: error\ndata: The server restarted during generation. Please try again.\n\n"
         return StreamingResponse(
             not_found(),
             media_type="text/event-stream",

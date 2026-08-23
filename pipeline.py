@@ -49,6 +49,18 @@ COMPRESSION_THRESHOLD = 0.04
 CENTER_BIAS_RATIO = 0.35
 MAX_CANDIDATES_PER_PROMPT = 15
 
+
+def _worker_count(name, default, maximum):
+    try:
+        return max(1, min(int(os.environ.get(name, default)), maximum))
+    except (TypeError, ValueError):
+        return default
+
+
+# Keep image processing within small hosting-instance CPU and memory limits.
+SEARCH_WORKERS = _worker_count("IMGSHEET_SEARCH_WORKERS", 2, 5)
+DOWNLOAD_WORKERS = _worker_count("IMGSHEET_DOWNLOAD_WORKERS", 2, 4)
+
 PAPER_SIZES = {
     "B4":     (257, 364),
     "B5":     (182, 257),
@@ -708,7 +720,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
 
     on_progress("Searching for all characters...")
     search_results = [None] * len(prompts)
-    with ThreadPoolExecutor(max_workers=min(len(prompts), 5)) as sex:
+    with ThreadPoolExecutor(max_workers=min(len(prompts), SEARCH_WORKERS)) as sex:
         sfuts = {sex.submit(_search, (i, p, prompt_counts[i])): i for i, p in enumerate(prompts)}
         for sf in as_completed(sfuts):
             i, prompt, needed, urls = sf.result()
@@ -749,7 +761,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                 continue
 
             # Phase 1: parallel downloads — save every passing image to disk immediately
-            with ThreadPoolExecutor(max_workers=4) as executor:
+            with ThreadPoolExecutor(max_workers=DOWNLOAD_WORKERS) as executor:
                 futures = {executor.submit(process_image, url, (700, 1000), seen, seen_lock, temp_dir): url for url in urls}
                 for future in as_completed(futures):
                     if cancel_event and cancel_event.is_set():
@@ -814,7 +826,7 @@ def run_pipeline(prompts: list, options: PipelineOptions, on_progress: Callable[
                     start=random.randint(10, 30),
                     engine=options.search_engine
                 )
-                with ThreadPoolExecutor(max_workers=4) as rex:
+                with ThreadPoolExecutor(max_workers=DOWNLOAD_WORKERS) as rex:
                     rfuts = {rex.submit(process_image, url, (700, 1000), seen, seen_lock, temp_dir): url for url in extra_urls}
                     for rf in as_completed(rfuts):
                         if len(all_images) >= total:

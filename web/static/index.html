@@ -382,6 +382,7 @@
   let cropRect      = { x: 0, y: 0, w: 0, h: 0 };
   let cropDragging  = false;
   let cropStart     = { x: 0, y: 0 };
+  let generationHeartbeat = null;
 
   // ===== ELEMENTS =====
   const promptsEl     = document.getElementById("prompts");
@@ -435,6 +436,20 @@
       }
     } catch {
       option.textContent = 'Google (SerpAPI) - usage unavailable';
+    }
+  }
+
+  function startGenerationHeartbeat() {
+    stopGenerationHeartbeat();
+    generationHeartbeat = setInterval(() => {
+      fetch('/health', { cache: 'no-store' }).catch(() => {});
+    }, 60_000);
+  }
+
+  function stopGenerationHeartbeat() {
+    if (generationHeartbeat !== null) {
+      clearInterval(generationHeartbeat);
+      generationHeartbeat = null;
     }
   }
 
@@ -829,10 +844,26 @@
     }
 
     const evtSource = new EventSource(`/progress/${jobId}`);
+    let reconnectTimer = null;
+    let reconnecting = false;
+    const clearReconnectTimer = () => {
+      if (reconnectTimer !== null) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+    };
+    startGenerationHeartbeat();
+    evtSource.onopen = () => {
+      if (reconnecting) appendStatus('Reconnected.', 'msg-success');
+      reconnecting = false;
+      clearReconnectTimer();
+    };
     evtSource.onmessage = (e) => appendStatus(e.data);
 
     evtSource.addEventListener('done', async (e) => {
       evtSource.close();
+      clearReconnectTimer();
+      stopGenerationHeartbeat();
       appendStatus('Done!', 'msg-success');
       generateBtn.disabled = false;
       generateBtn.textContent = 'Generate Sheet';
@@ -867,7 +898,12 @@
     });
 
     evtSource.addEventListener('error', (e) => {
+      // Network failures also emit an "error" event but have no SSE data.
+      // Let EventSource retry those automatically; handle server errors here.
+      if (!e.data) return;
       evtSource.close();
+      clearReconnectTimer();
+      stopGenerationHeartbeat();
       appendStatus(`Error: ${e.data || 'Unknown error'}`, 'msg-error');
       generateBtn.disabled = false;
       generateBtn.textContent = 'Generate Sheet';
@@ -875,10 +911,19 @@
 
     evtSource.onerror = () => {
       if (evtSource.readyState === EventSource.CLOSED) return;
-      evtSource.close();
-      appendStatus('Connection lost.', 'msg-error');
-      generateBtn.disabled = false;
-      generateBtn.textContent = 'Generate Sheet';
+      if (!reconnecting) {
+        reconnecting = true;
+        appendStatus('Connection interrupted; reconnecting...');
+      }
+      if (reconnectTimer === null) {
+        reconnectTimer = setTimeout(() => {
+          evtSource.close();
+          stopGenerationHeartbeat();
+          appendStatus('Could not reconnect after 2 minutes. Please try again.', 'msg-error');
+          generateBtn.disabled = false;
+          generateBtn.textContent = 'Generate Sheet';
+        }, 120_000);
+      }
     };
   });
 </script>
