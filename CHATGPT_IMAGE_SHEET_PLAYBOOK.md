@@ -1,6 +1,6 @@
 # ChatGPT Image Sheet Playbook
 
-Version: 1.0 · Updated: 2026-10-23
+Version: 1.1 · Updated: 2026-10-28
 
 ## What this file is
 
@@ -91,18 +91,19 @@ Earlier image sheets used approximately **45 × 65 mm** portraits, but the user 
 
 For printers without borderless B4 support, use the smallest reliable printer-safe margins, and tell the user the printer may have nonprintable edges. Avoid auto-scaling when printing: choose **Actual size / 100%** to preserve dimensions.
 
-## 5. Portrait and landscape image content in the *same* fixed grid
+## 5. Rotate landscape images 90° inside the *same* portrait grid (Option B)
 
-All **physical cells remain the same portrait rectangle**; cut boundaries never become staggered or irregular.
+**New explicit user preference: Option B.** All **physical cells remain identical portrait rectangles** with straight aligned cutting lines. For an image whose correct/upright composition is landscape, **rotate the complete landscape picture 90 degrees** (clockwise or counterclockwise) before fitting it into the portrait cell. This allows the sideways picture to use the full tall dimension of the card. After cutting, the recipient simply **turns the card sideways** to see the picture upright.
 
 For each source image:
-- Judge whether its composition is portrait or landscape.
-- **Fit landscape-composition artwork horizontally inside its portrait cell** instead of distorting it into a portrait image.
-- Do not rotate characters sideways merely to fill space.
-- Preserve subject shape and recognition; use proportional scaling and **white padding** if necessary.
-- Crop only where safe and where no important face, body, text, or other meaningful detail will be removed.
-- Prefer an alternate image that uses the cell more effectively over a tiny subject surrounded by excess whitespace.
-- Maintain equal cell dimensions, irrespective of the contained image's composition.
+- First correct any erroneous EXIF/display orientation so you know its true upright composition.
+- If naturally **landscape**, rotate **90° inside the portrait cell** (Option B); *do not* merely shrink it into a narrow horizontal strip with large empty areas above and below.
+- If naturally **portrait**, leave upright and fit normally.
+- Keep proportional scaling, preserve the complete important subject, and use minimal white padding. Never stretch, squash, or force a landscape composition into a portrait crop.
+- Ensure any text in landscape artwork remains readable **when the finished card is turned sideways**.
+- Only make a different choice if the user expressly asks for it or the source has an unusual composition that makes the intent genuinely uncertain.
+- The **grid, physical sheet, cutout dimensions, and cutting lines never rotate or change**. Only the artwork within landscape-oriented cards rotates.
+- Verify the final rendered Word page: landscape subjects should visibly appear sideways inside portrait cells *by design*, not distorted or cropped. Once a cutout is turned sideways, the scene should look normal.
 
 ## 6. Optional Matsubara / character jokes on the reverse — OFF by default
 
@@ -147,8 +148,8 @@ Primary output: **downloadable Microsoft Word \`.docx\`** suitable for printing,
 - [ ] Duplicate-image repetition is minimized.
 - [ ] B4 portrait, precisely aligned 5 × 5 grid, same cutout size.
 - [ ] Outer margins minimal and dark cut lines visible.
-- [ ] Wide/landscape artwork is fitted horizontally **inside** unchanged portrait cells.
-- [ ] Subject not unnaturally stretched, rotated, or cropped.
+- [ ] Landscape artwork is **rotated 90° (Option B)** inside portrait cells to use more card area; it looks upright when the cutout is turned sideways.
+- [ ] Subjects are never stretched or cropped improperly; portrait images remain upright, while landscape images are intentionally rotated 90°.
 - [ ] Correct front–back joke correspondence if optional backs are explicitly requested.
 - [ ] Back text light gray, unique, kid-friendly and relevant; backs absent otherwise.
 - [ ] Word file really exists and print layout/page count is checked.
