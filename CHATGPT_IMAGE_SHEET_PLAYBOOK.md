@@ -138,6 +138,7 @@ Primary output: **downloadable Microsoft Word \`.docx\`** suitable for printing,
 - Return a **verified working file download link**.
 - Briefly state: number of subjects, number of images, number of image pages, whether reverse joke pages are included, physical cell dimensions, and any uncertain/omitted names.
 - A PDF companion may be provided if useful but **.docx is the required default**.
+- **Default email recipient: `nolancasama@gmail.com` ONLY.** When the user asks to email a finished image sheet, send only to this address. Do not copy or include any other previously used address (including `mahmoud_khabatou@hotmail.com`) unless the user explicitly instructs otherwise for that particular send.
 - **Do not email** unless requested. If the user asks to email, attach the actual completed document through the connected Gmail app, if available, and verify sending.
 - Do not change or deploy the existing GitHub program when creating sheets. Editing this playbook itself requires an explicit instruction.
 
