@@ -123,6 +123,7 @@ When on:
   - General: 大阪の中心は松原や！知らんけど。
 - Printed backs must be **almost invisible at first glance**: text in pale gray around \`#D9D9D9\`, ordinary/thin font, NOT bold. Keep ink coverage minimal to help limit show-through onto the picture side; paper thickness/printing affects real show-through.
 - Center the light-gray text in its matching reverse cell, never on the front image.
+- **Reverse-side joke pages must have COMPLETELY TRANSPARENT cell boundaries**: no visible or printable horizontal lines, vertical lines, cut guides, outer borders, or grid outlines. Use a plain white background and position the pale-gray jokes using an **invisible** 5 × 5 alignment grid. The image fronts **retain** their dark cutting lines. Do not make jokes darker to compensate for invisible borders.
 - **Ensure double-sided alignment**, including mirroring/reversing the back grid's column order when needed for portrait duplex printing. Confirm which duplex edge to flip; don't assume that one mirroring convention works with every printer. Check with a small test page if in doubt.
 - Each back page uses exactly the same paper geometry and grid as its corresponding front. A 2-page image-only job becomes 4 physical pages with joke backs.
 
@@ -152,7 +153,7 @@ Primary output: **downloadable Microsoft Word \`.docx\`** suitable for printing,
 - [ ] Landscape artwork is **rotated 90° (Option B)** inside portrait cells to use more card area; it looks upright when the cutout is turned sideways.
 - [ ] Subjects are never stretched or cropped improperly; portrait images remain upright, while landscape images are intentionally rotated 90°.
 - [ ] Correct front–back joke correspondence if optional backs are explicitly requested.
-- [ ] Back text light gray, unique, kid-friendly and relevant; backs absent otherwise.
+- [ ] Back text light gray, unique, kid-friendly and relevant; **back page cell lines and borders fully invisible (no printed grid)**, while front cutting lines remain visible. Backs absent otherwise.
 - [ ] Word file really exists and print layout/page count is checked.
 - [ ] A working downloadable link and concise interpretation summary are given.
 - [ ] Email only if the user requests it.
